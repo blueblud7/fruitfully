@@ -1,0 +1,957 @@
+<title>초파리 뇌 실험실</title>
+<style>
+/* 레이아웃: 왼쪽 3D 실험장(전면), 오른쪽 실험 노트 패널. 다크 우선 */
+:root{--bg:#0f1115;--panel:#181b22;--panel2:#222632;--text:#e9ecf2;--dim:#9aa1b2;--accent:#7bd88f;--warn:#ff7a59;--l:#5aa9ff;--r:#ffb454;--line:#2c3140;color-scheme:dark}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f5f7;--panel:#ffffff;--panel2:#eef0f4;--text:#1a1d24;--dim:#5d6475;--line:#d9dce3;color-scheme:light}}
+:root[data-theme="light"]{--bg:#f4f5f7;--panel:#ffffff;--panel2:#eef0f4;--text:#1a1d24;--dim:#5d6475;--line:#d9dce3;color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Pretendard","Noto Sans KR",system-ui,sans-serif}
+#wrap{display:flex;height:100%}
+#view{flex:1;position:relative;min-width:0}
+#view canvas{display:block;width:100%;height:100%}
+#tabs{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
+#tabs button{background:rgba(20,22,28,.82);color:#fff;border:1px solid #ffffff22;padding:8px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+#tabs a.game{background:#ffcf4a;color:#1b1406;border-radius:999px;padding:8px 14px;font-size:14px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center}
+#games{position:absolute;top:60px;left:12px;right:12px;max-width:760px;max-height:calc(100% - 80px);overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:14px;z-index:5;box-shadow:0 12px 40px #0006}
+#games .ghead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+#games .ghead span{color:var(--dim);font-size:12.5px;flex:1;min-width:0}
+#games .ghead a{color:var(--dim);text-decoration:none;font-size:18px}
+#gameCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.gcard{display:flex;flex-direction:column;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text);text-decoration:none;min-width:0}
+a.gcard:hover,a.gcard:focus-visible{border-color:var(--accent);outline:none}
+.gcard .gt{font-weight:700;font-size:15px}
+.gcard .gd{color:var(--dim);font-size:12.5px;line-height:1.5}
+.gcard .gb{font-size:11.5px;color:var(--dim)}
+.gcard.soon{opacity:.6}
+.gcard .pill{align-self:flex-start;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--dim)}
+.gcard .pill.ok{background:var(--accent);color:#0b1a10;font-weight:700}
+#tabs button.on{background:var(--accent);color:#0b1a10;font-weight:700;border-color:transparent}
+#hud{position:absolute;left:12px;bottom:12px;background:rgba(20,22,28,.82);color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;max-width:min(460px,calc(100% - 24px));z-index:2}
+#flash{position:absolute;inset:0;pointer-events:none;border:0 solid var(--warn);transition:border-width .15s}
+#side{width:330px;background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:18px}
+.sub{color:var(--dim);font-size:12.5px;line-height:1.55}
+.card{background:var(--panel2);border-radius:12px;padding:12px}
+.card h2{font-size:13px;color:var(--dim);font-weight:600;margin-bottom:8px}
+.row{display:grid;grid-template-columns:96px 1fr 1fr;gap:6px;align-items:center;font-size:12px;margin:4px 0}
+.bar{height:10px;background:#0003;border-radius:6px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:6px}
+.bar.l i{background:var(--l)} .bar.r i{background:var(--r)}
+.legend{display:flex;gap:12px;font-size:11px;color:var(--dim);margin-bottom:6px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btns button{font:inherit;font-size:13px;padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+.btns button.on{background:var(--accent);color:#0b1a10;border-color:transparent;font-weight:700}
+.stat{font-size:13px;line-height:1.7}
+.stat b{font-variant-numeric:tabular-nums}
+.big{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.grp{width:100%;font-size:11.5px;color:var(--dim);margin-top:4px}
+.sl{width:100%;display:grid;grid-template-columns:92px 1fr 44px;gap:8px;align-items:center;font-size:12.5px}
+.sl input{width:100%;accent-color:var(--accent);height:28px}
+.sl output{text-align:right;font-variant-numeric:tabular-nums}
+table.t{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+table.t th,table.t td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t th{color:var(--dim);font-weight:600;white-space:nowrap}
+table.t tr.cur td{color:var(--accent);font-weight:700}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+#labels span{position:absolute;transform:translate(-50%,-130%);font-size:11px;white-space:nowrap;background:rgba(10,12,18,.78);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid #ffffff30}
+#labels span.side{background:none;border:0;color:#9fb3d9;font-weight:700;font-size:12px}
+@media (max-width:760px){#wrap{flex-direction:column}#view{height:58vh;flex:none}#side{width:auto;border-left:0;border-top:1px solid var(--line);flex:1;padding:12px 16px}#hud{font-size:12px}
+  #tabs{top:8px;left:8px;right:8px;gap:4px}#tabs button{padding:6px 9px;font-size:12px}#tabs a.game{padding:6px 9px;font-size:12px}#tabs .ex{display:none}#games{top:84px;left:8px;right:8px;max-height:calc(100% - 92px)}}
+</style>
+<div id="wrap">
+  <div id="view">
+    <div id="tabs">
+      <button data-m="escape" class="on">① 탈출<span class="ex"> (루밍)</span></button>
+      <button data-m="maze">② 미로<span class="ex"> (냄새)</span></button>
+      <button data-m="light">③ 주광성<span class="ex"> (빛)</span></button>
+      <button data-m="taste">④ 먹이<span class="ex"> (맛)</span></button>
+      <button data-m="groom">⑤ 그루밍</button>
+      <button data-m="gene">⑥ 유전자 조작</button>
+      <button data-m="brain3d">⑦ 3D 뇌</button>
+      <a class="game" href="#" id="gamesBtn" role="button" aria-expanded="false">🎮 게임</a>
+    </div>
+    <div id="games" hidden>
+      <div class="ghead"><b>커넥톰 게임</b><span>같은 초파리 뇌 시뮬레이션으로 움직이는 게임</span><a href="#" id="gamesClose" aria-label="닫기">✕</a></div>
+      <div id="gameCards"></div>
+    </div>
+    <div id="labels"></div>
+    <div id="hud"></div>
+    <div id="flash"></div>
+  </div>
+  <aside id="side">
+    <div>
+      <h1>초파리 뇌 실험실</h1>
+      <p class="sub" id="metaLine"></p>
+    </div>
+    <div class="card"><h2>실험 조작</h2><div class="btns" id="controls"></div></div>
+    <div class="card"><h2>결과</h2><div class="stat" id="stats"></div></div>
+    <div class="card">
+      <h2 id="brainTitle">뇌 상태 (선택한 초파리)</h2>
+      <div class="legend"><span><b style="background:var(--l)"></b>왼쪽</span><span><b style="background:var(--r)"></b>오른쪽</span><span id="unit">단위 Hz</span></div>
+      <div id="brain"></div>
+    </div>
+    <div class="card"><h2>이 실험에서 뇌가 하는 일 / 하지 않는 일</h2><p class="sub" id="honest"></p></div>
+  </aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+'use strict';
+const T = /*TABLES*/null;
+const E = /*EXTRA*/null;   // 맛·물·그루밍·뉴런 차단 반응표 + 3D 뇌 파동 (brain_extra.json)
+
+/* ================= 뇌 반응표 보간 ================= */
+function seg(levels, x){
+  x = Math.max(levels[0], Math.min(levels[levels.length-1], x));
+  let i = 0; while (i < levels.length-2 && levels[i+1] <= x) i++;
+  return [i, (x-levels[i])/(levels[i+1]-levels[i])];
+}
+function brain2(kind, l, r){
+  const L = T.levels2d, [i,fi] = seg(L,l), [j,fj] = seg(L,r), tb = T[kind];
+  const a = tb[L[i]+','+L[j]], b = tb[L[i+1]+','+L[j]], c = tb[L[i]+','+L[j+1]], d = tb[L[i+1]+','+L[j+1]];
+  const o = {}; for (const k of T.readouts) o[k] = a[k]*(1-fi)*(1-fj) + b[k]*fi*(1-fj) + c[k]*(1-fi)*fj + d[k]*fi*fj;
+  return o;
+}
+function brainOdor(x){
+  const L = T.odor_levels, [i,f] = seg(L,x), a = T.odor[L[i]], b = T.odor[L[i+1]];
+  const o = {}; for (const k of T.readouts) o[k] = a[k]*(1-f) + b[k]*f; return o;
+}
+// brain_extra 표: 키 "a,b" (입력 Hz) → 판독 뉴런 발화율. 양선형/선형 보간
+function interp2(tb, a, b){
+  const L = E.levels, [i,fi] = seg(L,a), [j,fj] = seg(L,b);
+  const A = tb[L[i]+','+L[j]], B = tb[L[i+1]+','+L[j]], C = tb[L[i]+','+L[j+1]], D = tb[L[i+1]+','+L[j+1]];
+  const o = {}; for (const k in A) o[k] = A[k]*(1-fi)*(1-fj) + B[k]*fi*(1-fj) + C[k]*(1-fi)*fj + D[k]*fi*fj;
+  return o;
+}
+function interp1(tb, x){
+  const L = E.levels, [i,f] = seg(L,x), A = tb[L[i]], B = tb[L[i+1]];
+  const o = {}; for (const k in A) o[k] = A[k]*(1-f) + B[k]*f; return o;
+}
+const avg2 = (b, k) => (b[k+'_L'] + b[k+'_R'])/2;
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+const rnd = (a=1) => (Math.random()*2-1)*a;
+const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
+
+/* ================= 렌더 기본 ================= */
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8ec5ff);
+scene.fog = new THREE.Fog(0x8ec5ff, 40, 90);
+const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 300);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.maxPolarAngle = Math.PI*0.49;
+const hemi = new THREE.HemisphereLight(0xffffff, 0x445533, 0.85); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(20,40,10); scene.add(sun);
+
+function pixTex(base, noise, seed){
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d'); let s = seed;
+  const r = () => (s = (s*16807) % 2147483647) / 2147483647;
+  for (let y=0;y<16;y++) for (let x=0;x<16;x++){
+    const k = 1 + (r()-0.5)*noise;
+    g.fillStyle = `rgb(${clamp(base[0]*k,0,255)|0},${clamp(base[1]*k,0,255)|0},${clamp(base[2]*k,0,255)|0})`;
+    g.fillRect(x,y,1,1);
+  }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; return t;
+}
+const MAT = {
+  grass: new THREE.MeshLambertMaterial({map: pixTex([96,170,72],.35,7)}),
+  dirt:  new THREE.MeshLambertMaterial({map: pixTex([134,96,67],.35,11)}),
+  stone: new THREE.MeshLambertMaterial({map: pixTex([128,128,132],.3,5)}),
+  plank: new THREE.MeshLambertMaterial({map: pixTex([168,132,84],.25,3)}),
+  dark:  new THREE.MeshLambertMaterial({map: pixTex([60,58,70],.3,9)})
+};
+const BOX = new THREE.BoxGeometry(1,1,1);
+let world = new THREE.Group(); scene.add(world);
+function blocks(list, mat){ // list of [x,y,z]
+  const m = new THREE.InstancedMesh(BOX, mat, list.length), o = new THREE.Object3D();
+  list.forEach((p,i)=>{ o.position.set(p[0]+.5,p[1]+.5,p[2]+.5); o.updateMatrix(); m.setMatrixAt(i,o.matrix); });
+  world.add(m); return m;
+}
+function floor(x0,z0,w,d,mat=MAT.grass){ const L=[]; for(let x=x0;x<x0+w;x++) for(let z=z0;z<z0+d;z++) L.push([x,-1,z]); blocks(L,mat); }
+
+/* ================= 초파리 모델 ================= */
+const FLY_S = 0.32;
+function makeFly(){
+  const g = new THREE.Group();
+  const body = new THREE.MeshLambertMaterial({color:0x8a6a3a});
+  const dark = new THREE.MeshLambertMaterial({color:0x3a2a18});
+  const eye  = new THREE.MeshLambertMaterial({color:0xd8281f, emissive:0x400000});
+  const wing = new THREE.MeshLambertMaterial({color:0xe8f1ff, transparent:true, opacity:.55, side:THREE.DoubleSide});
+  const add = (geo, mat, x,y,z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); g.add(m); return m; };
+  add(new THREE.BoxGeometry(.5,.45,.6), body, 0,.45,0);              // thorax
+  for (let i=0;i<3;i++) add(new THREE.BoxGeometry(.46-i*.08,.38-i*.06,.18), i%2?dark:body, 0,.42,-.38-i*.17); // abdomen stripes
+  add(new THREE.BoxGeometry(.42,.36,.3), body, 0,.5,.42);            // head
+  add(new THREE.BoxGeometry(.16,.24,.2), eye, -.2,.55,.45);
+  add(new THREE.BoxGeometry(.16,.24,.2), eye,  .2,.55,.45);
+  const wl = add(new THREE.BoxGeometry(.5,.02,.75), wing, -.32,.7,-.25);
+  const wr = add(new THREE.BoxGeometry(.5,.02,.75), wing,  .32,.7,-.25);
+  for (const sx of [-1,1]) for (let i=1;i<3;i++){ const l = add(new THREE.BoxGeometry(.05,.3,.05), dark, sx*.28,.18,.2-i*.2); l.rotation.z = sx*.5; }
+  // 앞다리: 어깨를 축으로 돌 수 있게 (그루밍)
+  const front = [-1,1].map(sx => { const p = new THREE.Group(); p.position.set(sx*.2,.33,.24); p.rotation.z = sx*.5; g.add(p);
+    const l = new THREE.Mesh(new THREE.BoxGeometry(.05,.36,.05), dark); l.position.y = -.17; p.add(l); return p; });
+  // 더듬이, 주둥이(평소엔 접혀 있음)
+  for (const sx of [-1,1]){ const a = add(new THREE.BoxGeometry(.05,.13,.05), dark, sx*.07,.62,.6); a.rotation.x = .5; }
+  const pb = new THREE.Group(); pb.position.set(0,.36,.5); g.add(pb);
+  const pm = new THREE.Mesh(new THREE.BoxGeometry(.07,.3,.07), dark); pm.position.y = -.15; pb.add(pm);
+  pb.rotation.x = -.35; pb.scale.y = .25;
+  g.scale.setScalar(FLY_S);
+  g.userData = {wl, wr, front, pb};
+  return g;
+}
+function newFly(x,z,h){
+  const mesh = makeFly(); world.add(mesh);
+  const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color:0xfff27a, transparent:true, opacity:.65}));
+  world.add(trail);
+  return {mesh, trail, pts:[], x, z, y:0, h, vx:0, vy:0, vz:0, airborne:false, flap:0, brain:null, inp:{l:0,r:0}, dPrev:null, done:false, t:0};
+}
+function drawFly(f, dt){
+  f.mesh.position.set(f.x, f.y, f.z);
+  f.mesh.rotation.y = f.h;
+  const u = f.mesh.userData;
+  if (f.airborne){ f.flap += dt*60; u.wl.rotation.z = Math.sin(f.flap)*.9; u.wr.rotation.z = -Math.sin(f.flap)*.9; }
+  else { u.wl.rotation.z = .15; u.wr.rotation.z = -.15; }
+}
+function pushTrail(f){
+  const last = f.pts[f.pts.length-1];
+  if (!last || Math.hypot(last.x-f.x, last.z-f.z) > .15){
+    f.pts.push(new THREE.Vector3(f.x, .05, f.z));
+    if (f.pts.length > 900) f.pts.shift();
+    f.trail.geometry.setFromPoints(f.pts);
+  }
+}
+// heading h: fly faces +z rotated by h → forward = (sin h, cos h). Left of forward = (cos h, -sin h)
+const fwd = h => [Math.sin(h), Math.cos(h)];
+const leftv = h => [Math.cos(h), -Math.sin(h)];
+
+/* ================= 공통 상태 ================= */
+let mode = 'escape', M = null, selFly = null, last = performance.now();
+const $ = id => document.getElementById(id);
+$('metaLine').textContent = `FlyWire 커넥톰 ${T.meta.neurons.toLocaleString()}개 뉴런 · 연결 ${T.meta.synapse_rows.toLocaleString()}쌍 전체를 LIF 모델(Shiu 외 2024)로 시뮬레이션한 반응표를 실시간으로 보간해 초파리를 움직입니다.`;
+function clearWorld(){
+  scene.remove(world); world.traverse(o => { if (o.geometry && o.geometry !== BOX) o.geometry.dispose(); });
+  world = new THREE.Group(); scene.add(world);
+}
+// defs: {t,f,on} 버튼 · {grp} 묶음 제목 · {range:[min,max,step], v, t, f, id} 슬라이더
+function setControls(defs){
+  const box = $('controls'); box.innerHTML = '';
+  defs.forEach(d => {
+    if ('grp' in d){ const g = document.createElement('div'); g.className = 'grp'; g.textContent = d.grp; box.appendChild(g); return; }
+    if (d.range){
+      const w = document.createElement('label'); w.className = 'sl';
+      w.innerHTML = `<span>${d.t}</span><input type="range" min="${d.range[0]}" max="${d.range[1]}" step="${d.range[2]}" value="${d.v}"${d.id?` id="${d.id}"`:''}><output>${d.v}</output>`;
+      const inp = w.querySelector('input'), out = w.querySelector('output');
+      inp.oninput = () => { out.textContent = inp.value; d.f(+inp.value); };
+      box.appendChild(w); return;
+    }
+    const b = document.createElement('button'); b.textContent = d.t; if (d.on) b.classList.add('on'); if (d.key) b.dataset.key = d.key;
+    b.onclick = () => d.f(b); box.appendChild(b);
+  });
+}
+// 같은 묶음(key 접두사) 버튼 중 하나만 켜기
+function pick(prefix, key){ document.querySelectorAll(`#controls button[data-key^="${prefix}:"]`).forEach(b => b.classList.toggle('on', b.dataset.key === prefix+':'+key)); }
+function brainHead(title, unit){ $('brainTitle').textContent = title || '뇌 상태 (선택한 초파리)'; $('unit').textContent = unit || '단위 Hz'; }
+// 바닥(y=h 평면) 클릭 → 콜백. 드래그(카메라 회전)와 구분
+function floorClick(obj, h, cb){
+  const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0,1,0), -h); let down = null;
+  obj.pd = e => down = [e.clientX,e.clientY];
+  obj.pu = e => { if (down && Math.hypot(e.clientX-down[0], e.clientY-down[1]) < 6){
+    const r = renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1, -(e.clientY-r.top)/r.height*2+1), camera);
+    const hit = new THREE.Vector3(); if (ray.ray.intersectPlane(plane, hit)) cb(hit); } down = null; };
+  renderer.domElement.addEventListener('pointerdown', obj.pd); renderer.domElement.addEventListener('pointerup', obj.pu);
+}
+function unClick(obj){ if (obj.pd){ renderer.domElement.removeEventListener('pointerdown', obj.pd); renderer.domElement.removeEventListener('pointerup', obj.pu); obj.pd = obj.pu = null; } }
+function brainPanel(rows){
+  $('brain').innerHTML = rows.map(([name, l, r, max]) => `<div class="row"><span>${name}</span>
+    <div class="bar l"><i style="width:${clamp(l/max*100,0,100)}%"></i></div>
+    <div class="bar r"><i style="width:${clamp(r/max*100,0,100)}%"></i></div></div>`).join('');
+}
+const fmt = x => x.toFixed(0);
+
+/* ================= ① 탈출 · ⑥ 유전자 조작 ================= */
+const SIL = {none:'차단 없음 (정상)', GF:'거대섬유 GF (DNp01)', DNp04:'DNp04', LPLC2:'LPLC2', LC4:'LC4'};
+const GF_TH = 45;   // 탈출 문턱: 거대섬유 양쪽 평균 45Hz (손으로 정한 값)
+let THROW_MAT = null;
+const escape = {
+  gene: false,
+  init(){
+    floor(-12,-12,24,24);
+    const L=[]; for (let x=-2;x<2;x++) for (let z=-2;z<2;z++) L.push([x,0,z]); blocks(L, MAT.plank);
+    const trees=[[-8,-7],[7,-8],[-7,8],[8,6]]; trees.forEach(([x,z])=>{ const t=[]; for(let y=0;y<3;y++) t.push([x,y,z]); blocks(t,MAT.dirt);
+      const lv=[]; for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++) for(let c=3;c<5;c++) lv.push([x+a,c,z+b]); blocks(lv,new THREE.MeshLambertMaterial({map:pixTex([60,140,60],.4,13)})); });
+    this.fly = newFly(0,0,0); this.fly.y = 1; this.home();
+    this.obj = null; this.blind = false; this.msg = '물체를 던져 보세요.';
+    if (!this.log) this.log = [];
+    if (!this.cond) this.cond = 'none';
+    camera.position.set(5,5,7); controls.target.set(0,1,0);
+    selFly = this.fly;
+    const throws = [
+      {t:'🎾 옆에서 던지기', f:()=>this.throwObj('side')},
+      {t:'⬇️ 위에서 떨어뜨리기', f:()=>this.throwObj('top')},
+      {t:'🐢 천천히 다가가기', f:()=>this.throwObj('slow')}];
+    if (!this.gene){
+      this.cond = 'none';
+      setControls([...throws, {t:'🚫 루밍 뉴런 차단', f:b=>{ this.blind=!this.blind; b.classList.toggle('on',this.blind); }}]);
+      $('honest').innerHTML = '뇌가 하는 일: 다가오는 물체가 눈에서 커지는 속도를 루밍 감지 뉴런(LPLC2·LC4) 입력으로 넣으면, 커넥톰이 거대섬유(DNp01)와 DNp04의 발화율을 냅니다. <b>탈출 여부와 시점은 거대섬유 발화율로만 정해지고</b>, 어느 쪽으로 뛸지는 위협 쪽에서만 켜지는 DNp04의 좌우 차이로 정합니다.<br><br>하지 않는 일: 점프 동작 자체, 날개짓, 착지는 손으로 만든 몸 모델입니다. 반응표는 300ms 정상상태 발화율이라 실제 밀리초 단위 지연은 반영되지 않습니다.';
+    } else {
+      setControls([...throws,
+        {grp:'차단할 뉴런 (유전자 조작으로 침묵시킴)'},
+        ...Object.keys(SIL).map(k => ({t:k==='none'?'없음':k==='GF'?'거대섬유':k, key:'sil:'+k, on:this.cond===k, f:()=>{ this.cond = k; pick('sil', k); }})),
+        {grp:'자동 실험'},
+        {t:'🧪 조건마다 30회 자동 실험', f:()=>this.batch(10)},
+        {t:'🗑️ 기록 지우기', f:()=>{ this.log = []; }}]);
+      $('honest').innerHTML = '뇌가 하는 일: 뉴런 하나의 유형을 <b>커넥톰 시뮬레이션에서 아예 발화하지 못하게 만든 채</b>(유전자 조작으로 침묵시킨 초파리를 흉내) 루밍 감지 뉴런(LPLC2 210개 + LC4 104개)에 같은 입력을 넣어 미리 계산한 반응표를 씁니다. 조건을 바꾸면 쓰는 반응표가 바뀔 뿐, 몸 모델과 탈출 문턱(거대섬유 45Hz)은 그대로입니다.<br><br>관찰: 거대섬유를 끄면 탈출 신호가 0이 됩니다. LPLC2를 끄면 거대섬유가 최대 50~75Hz로 약해지고, LC4를 끄면 조금 낮아집니다. <b>DNp04를 끄면 오히려 거대섬유가 정상보다 세졌습니다</b> — DNp04 경로가 거대섬유를 일부 억제하는 것으로 보입니다 (이 모델 기준).<br><br>하지 않는 일: 실제 초파리는 거대섬유가 없어도 더 느린 다른 경로로 탈출할 수 있다고 알려져 있지만, 이 몸 모델은 거대섬유만 탈출 신호로 씁니다. 그래서 「거대섬유 차단 = 맞음」은 이 모델의 한계이기도 합니다. 점프 방향은 DNp04 좌우 차이로 정하는데, DNp04를 끄면 방향 정보가 없어 무작위로 뜁니다.';
+    }
+  },
+  dispose(){ this.obj = null; },
+  home(){ const f=this.fly; f.x=0; f.z=0; f.y=1; f.h=0; f.airborne=false; f.vx=f.vy=f.vz=0; },
+  table(inL, inR){ return this.cond === 'none' ? brain2('loom', inL, inR) : interp2(E.silence[this.cond], inL, inR); },
+  throwObj(kind){
+    if (this.obj) return;
+    const f = this.fly; if (f.airborne) return;
+    const ang = Math.random()*Math.PI*2, R = 11;
+    let p, v, speed = kind==='slow' ? 2.2 : 9;
+    if (kind==='top'){ p = new THREE.Vector3(f.x+rnd(.3), 12, f.z+rnd(.3)); }
+    else p = new THREE.Vector3(f.x+Math.sin(ang)*R, 1.4, f.z+Math.cos(ang)*R);
+    v = new THREE.Vector3(f.x, f.y+.15, f.z).sub(p).normalize().multiplyScalar(speed);
+    if (!THROW_MAT) THROW_MAT = new THREE.MeshLambertMaterial({map:pixTex([200,70,60],.3,21)});
+    const mesh = new THREE.Mesh(BOX, THROW_MAT); mesh.scale.setScalar(.9);
+    mesh.position.copy(p); world.add(mesh);
+    this.obj = {mesh, p, v, th:null, t0:performance.now(), kind, trig:null, gfMax:0};
+    this.msg = kind==='slow' ? '천천히 다가가는 물체: 시야에서 커지는 속도가 느리면 루밍 뉴런이 약하게 반응합니다.' : '물체가 날아옵니다…';
+  },
+  step(dt){
+    const f = this.fly, o = this.obj;
+    let inL = 0, inR = 0;
+    if (o){
+      o.p.addScaledVector(o.v, dt); o.mesh.position.copy(o.p); o.mesh.rotation.x += dt*4;
+      const dx = o.p.x-f.x, dy = o.p.y-(f.y+.15), dz = o.p.z-f.z, d = Math.hypot(dx,dy,dz);
+      const th = 2*Math.atan(.45/Math.max(d,.05));
+      const dth = o.th==null ? 0 : (th-o.th)/dt; o.th = th;
+      const fw = fwd(f.h), lv = leftv(f.h);
+      const lat = (dx*lv[0]+dz*lv[1]) / Math.max(Math.hypot(dx,dz),1e-3);   // +1 left, -1 right
+      const top = Math.abs(dy) / d;                                           // overhead → both eyes
+      const wl = clamp(.5 + lat*.8, 0, 1)*(1-top) + top, wr = clamp(.5 - lat*.8, 0, 1)*(1-top) + top;
+      const drive = clamp(dth*60, 0, 100) * (this.blind ? 0 : 1);
+      inL = drive*wl; inR = drive*wr;
+      if (d < .55 && !f.airborne && !o.hit && !o.esc){
+        o.hit = true;
+        this.msg = this.blind ? '맞았다! 루밍 뉴런을 차단하자 거대섬유가 발화하지 않았습니다.'
+          : this.cond === 'GF' ? '맞았다! 거대섬유를 침묵시키자 탈출 신호가 0Hz였습니다.'
+          : this.cond !== 'none' ? `맞았다! ${SIL[this.cond]} 차단 상태에서 거대섬유가 문턱(${GF_TH}Hz)에 못 미쳤습니다 (최대 ${fmt(o.gfMax)}Hz).`
+          : '맞았다! 물체가 너무 늦게 커졌습니다(거대섬유 문턱 미달).';
+        this.log.push({res:'hit', kind:o.kind, cond:this.cond, gfMax:o.gfMax}); this.flash();
+      }
+      if (o.p.y < -2 || Math.hypot(o.p.x,o.p.z) > 30 || o.hit){ world.remove(o.mesh); this.obj = null; }
+    }
+    const b = this.table(inL, inR); f.brain = b; f.inp = {l:inL, r:inR};
+    const gf = (b.DNp01_L + b.DNp01_R)/2;
+    if (o && !o.hit && !o.esc) o.gfMax = Math.max(o.gfMax, gf);
+    if (o && !f.airborne && !o.hit && !o.esc && gf > GF_TH){
+      o.esc = true;
+      // 탈출: DNp04는 위협 쪽에서 켜진다 → 반대쪽으로
+      const side = b.DNp04_L - b.DNp04_R;            // >0: 위협이 왼쪽
+      const fw = fwd(f.h), lv = leftv(f.h);
+      const away = new THREE.Vector3(f.x-o.p.x, 0, f.z-o.p.z).normalize();
+      const latDir = side > 2 ? -1 : side < -2 ? 1 : (Math.random()<.5?-1:1);
+      const hx = away.x*.6 + lv[0]*latDir*.8, hz = away.z*.6 + lv[1]*latDir*.8, n = Math.hypot(hx,hz)||1;
+      f.vx = hx/n*4; f.vz = hz/n*4; f.vy = 4.5; f.airborne = true;
+      const dist = o.p.distanceTo(new THREE.Vector3(f.x,f.y,f.z));
+      this.msg = `거대섬유 ${fmt(gf)}Hz 발화 → 탈출! (물체 거리 ${dist.toFixed(1)}블록, 위협 방향 ${side>2?'왼쪽':side<-2?'오른쪽':'정면/위'} → ${latDir<0?'오른쪽':'왼쪽'}으로 점프)`;
+      this.log.push({res:'escape', kind:o.kind, gf, dist, cond:this.cond, gfMax:gf});
+    }
+    if (f.airborne){
+      f.x += f.vx*dt; f.z += f.vz*dt; f.y += f.vy*dt; f.vy -= 3.2*dt;
+      f.h = Math.atan2(f.vx, f.vz);
+      if (f.y <= 0 && f.vy < 0){ f.y = 0; f.airborne = false; setTimeout(()=>{ if (!this.obj && M === this) this.home(); }, 900); }
+    }
+    drawFly(f, dt);
+    brainPanel([
+      ['루밍 입력', inL, inR, 100], ['거대섬유 DNp01', b.DNp01_L, b.DNp01_R, 160], ['DNp04', b.DNp04_L, b.DNp04_R, 250]
+    ]);
+    $('stats').innerHTML = this.gene ? this.compare(gf) : (() => {
+      const esc = this.log.filter(x=>x.res==='escape').length, hit = this.log.filter(x=>x.res==='hit').length;
+      return `시도 <b>${this.log.length}</b> · 탈출 <b>${esc}</b> · 맞음 <b>${hit}</b><br>거대섬유 평균 <span class="big">${fmt(gf)}</span> Hz <span class="sub">(탈출 문턱 ${GF_TH}Hz)</span>`; })();
+    $('hud').textContent = this.msg;
+  },
+  summary(){
+    const out = {};
+    for (const k of Object.keys(SIL)){
+      const L = this.log.filter(x=>x.cond===k), esc = L.filter(x=>x.res==='escape');
+      const slow = L.filter(x=>x.kind==='slow'), slowEsc = slow.filter(x=>x.res==='escape');
+      out[k] = {n:L.length, esc:esc.length, rate: L.length ? esc.length/L.length : null,
+        dist: esc.length ? esc.reduce((a,x)=>a+x.dist,0)/esc.length : null,
+        gfMax: L.length ? L.reduce((a,x)=>a+x.gfMax,0)/L.length : null,
+        slow: slow.length ? `${slowEsc.length}/${slow.length}` : '—',
+        gfFull: avg2(k === 'none' ? brain2('loom',100,100) : interp2(E.silence[k],100,100), 'DNp01')};
+    }
+    return out;
+  },
+  compare(gf){
+    const S = this.summary(), pc = x => x==null ? '—' : Math.round(x*100)+'%', d1 = x => x==null ? '—' : x.toFixed(1);
+    return `지금 조건: <b>${SIL[this.cond]}</b> · 거대섬유 <span class="big">${fmt(gf)}</span> Hz <span class="sub">(문턱 ${GF_TH}Hz)</span>
+      <table class="t"><tr><th>차단</th><th>시도</th><th>탈출</th><th>거리</th><th>느린</th><th>GF@100</th></tr>
+      ${Object.keys(SIL).map(k => `<tr class="${k===this.cond?'cur':''}"><td>${k==='none'?'없음':k}</td><td>${S[k].n}</td><td>${pc(S[k].rate)}</td><td>${d1(S[k].dist)}</td><td>${S[k].slow}</td><td>${fmt(S[k].gfFull)}</td></tr>`).join('')}
+      </table><p class="sub" style="margin-top:6px">탈출: 탈출 비율. 거리: 거대섬유가 문턱을 넘은 순간 물체까지 거리(블록, 클수록 일찍 반응). 느린: 천천히 다가오는 물체에서 탈출한 횟수. GF@100: 루밍 입력을 양쪽 모두 100Hz로 줬을 때 반응표의 거대섬유 발화율(Hz).</p>`;
+  },
+  // 헤드리스 시행: 실제 시뮬레이션 스텝을 그대로 돌린다 (화면 시간과 무관)
+  trial(kind, cond){
+    if (cond) this.cond = cond;
+    if (this.obj){ world.remove(this.obj.mesh); this.obj = null; }
+    this.home(); const n0 = this.log.length; this.throwObj(kind);
+    for (let i = 0; i < 400 && (this.obj || this.fly.airborne); i++) this.step(1/60);
+    if (this.obj){ world.remove(this.obj.mesh); this.obj = null; }
+    this.home();
+    return this.log.length > n0 ? this.log[this.log.length-1] : null;
+  },
+  batch(n){
+    const keep = this.cond;
+    for (const k of Object.keys(SIL)) for (const kind of ['side','top','slow']) for (let i=0;i<n;i++) this.trial(kind, k);
+    this.cond = keep; this.msg = `조건 5개 × (옆·위·느린 물체 각 ${n}회) 자동 실험을 마쳤습니다. 결과 표를 보세요.`;
+  },
+  flash(){ $('flash').style.borderWidth = '10px'; setTimeout(()=>$('flash').style.borderWidth='0', 200); }
+};
+const gene = Object.assign({}, escape, {gene:true, log:null, cond:'none'});
+
+/* ================= ② 미로 ================= */
+const maze = {
+  N: 15,
+  init(){
+    this.genMaze();
+    this.brainOn = true; this.flies = []; this.results = {on:[], off:[]}; this.t = 0;
+    camera.position.set(0, 22, 13); controls.target.set(0,0,0);
+    setControls([
+      {t:'🧠 뇌 켬 (냄새 추적)', on:true, f:b=>{ this.brainOn=!this.brainOn; b.classList.toggle('on',this.brainOn); b.textContent = this.brainOn?'🧠 뇌 켬 (냄새 추적)':'💤 뇌 끔 (무작위 보행)'; this.reset(); }},
+      {t:'🔁 다시 출발', f:()=>this.reset()},
+      {t:'🧱 새 미로', f:()=>{ clearWorld(); this.genMaze(); this.reset(); }},
+      {t:'⏩ 4배속', f:b=>{ this.fast=!this.fast; b.classList.toggle('on',this.fast); }}
+    ]);
+    $('honest').innerHTML = '뇌가 하는 일: 초파리 위치의 냄새를 과일 냄새 수용 뉴런(DM1·DM2·DM4·VM2·VA2, 양쪽 266개) 입력으로 넣으면, 커넥톰이 하강 뉴런 발화를 냅니다. 초파리는 <b>그 발화가 방금보다 세졌는지 약해졌는지</b>만 보고 직진하거나 방향을 바꿉니다.<br><br>실험에서 알게 된 것: ① 냄새를 왼쪽/오른쪽에 따로 줘도 하강 뉴런 반응이 거의 같았습니다. 그래서 좌우 비교는 쓰지 않습니다. ② 이 모델의 냄새 반응은 수용 뉴런당 약 0.4Hz에서 켜지고 1.2Hz 근처에서 포화하는 좁은 스위치였습니다(적응이 없는 모델이라서). 그래서 실제 수용 뉴런처럼 <b>적응해 로그로 변환한다고 가정</b>하고, 미로 전체의 냄새 범위를 그 구간에 맞췄습니다. 반응표는 시드 8개 평균입니다.<br><br>손으로 만든 부분: 냄새 확산(길을 따라 퍼진다고 가정), 감각 변환, 「세지면 직진, 약해지면 방향 전환」 규칙.';
+    this.reset();
+  },
+  genMaze(){
+    const N = this.N, g = Array.from({length:N}, () => Array(N).fill(1));
+    const st = [[1,1]]; g[1][1] = 0;
+    while (st.length){
+      const [x,z] = st[st.length-1];
+      const nb = [[2,0],[-2,0],[0,2],[0,-2]].map(([a,b])=>[x+a,z+b]).filter(([a,b])=>a>0&&b>0&&a<N-1&&b<N-1&&g[a][b]);
+      if (!nb.length){ st.pop(); continue; }
+      const [a,b] = nb[Math.random()*nb.length|0]; g[a][b] = 0; g[(a+x)/2][(b+z)/2] = 0; st.push([a,b]);
+    }
+    // 고리 몇 개 (막다른 길만 있는 완전 미로보다 현실적)
+    for (let k=0;k<6;k++){ const x = 1+(Math.random()*(N-2)|0), z = 1+(Math.random()*(N-2)|0); if ((x+z)%2===1) g[x][z] = 0; }
+    this.g = g; this.c = (N-1)/2|0; if (g[this.c][this.c]) { g[this.c][this.c] = 0; g[this.c-1][this.c] = 0; }
+    const off = -N/2;
+    this.off = off;
+    floor(off-1, off-1, N+2, N+2);
+    const W = []; for (let x=0;x<N;x++) for (let z=0;z<N;z++) if (g[x][z]) { W.push([x+off,0,z+off]); W.push([x+off,1,z+off]); }
+    blocks(W, MAT.stone);
+    // 과일
+    const fruit = new THREE.Group();
+    const apple = new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.6), new THREE.MeshLambertMaterial({map:pixTex([220,40,40],.25,31), emissive:0x330000}));
+    apple.position.y = .35; fruit.add(apple);
+    const stem = new THREE.Mesh(new THREE.BoxGeometry(.08,.2,.08), new THREE.MeshLambertMaterial({color:0x5a3a1a})); stem.position.y = .75; fruit.add(stem);
+    fruit.position.set(this.c+off+.5, 0, this.c+off+.5); world.add(fruit); this.fruit = fruit;
+    // 냄새: 과일에서 길을 따라 퍼진 거리
+    const D = Array.from({length:N}, () => Array(N).fill(Infinity)); D[this.c][this.c] = 0; const q = [[this.c,this.c]];
+    while (q.length){ const [x,z] = q.shift(); for (const [a,b] of [[1,0],[-1,0],[0,1],[0,-1]]){ const u=x+a, v=z+b; if (u>=0&&v>=0&&u<N&&v<N&&!g[u][v]&&D[u][v]===Infinity){ D[u][v]=D[x][z]+1; q.push([u,v]); } } }
+    this.D = D; this.maxD = Math.max(...D.flat().filter(x=>x<Infinity));
+    // 냄새 구름 시각화
+    const cloud = []; for (let x=0;x<N;x++) for (let z=0;z<N;z++) if (!g[x][z] && D[x][z] < Infinity) cloud.push([x,z,D[x][z]]);
+    const cm = new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1), new THREE.MeshBasicMaterial({color:0xff4fa3, transparent:true, opacity:.28, depthWrite:false}), cloud.length);
+    const o = new THREE.Object3D(); const col = new THREE.Color();
+    cloud.forEach(([x,z,d],i)=>{ o.position.set(x+off+.5,.02,z+off+.5); o.rotation.x=-Math.PI/2; const s = clamp(Math.exp(-d/9),.05,1); o.scale.setScalar(.25+.75*s); o.updateMatrix(); cm.setMatrixAt(i,o.matrix); });
+    world.add(cm);
+  },
+  cellAt(x,z){ return [Math.floor(x - this.off), Math.floor(z - this.off)]; },
+  wall(x,z){ const [a,b] = this.cellAt(x,z); return a<0||b<0||a>=this.N||b>=this.N||this.g[a][b]===1; },
+  odor(x,z){ // ORN 발화율 (Hz): 과일까지의 길 거리로 감쇠 + 난류 잡음
+    const [a,b] = this.cellAt(x,z); const d = this.D[a]?.[b]; if (d===undefined||d===Infinity) return 0;
+    // 셀 안에서 이웃 쪽으로 연속 보간
+    const fx = x - this.off - a - .5, fz = z - this.off - b - .5;
+    let dd = d; const nx = this.D[a+Math.sign(fx)]?.[b], nz = this.D[a]?.[b+Math.sign(fz)];
+    if (nx!==undefined && nx<Infinity) dd += (nx-d)*Math.abs(fx); if (nz!==undefined && nz<Infinity) dd += (nz-d)*Math.abs(fz);
+    // 농도 c = exp(-거리/9). 수용 뉴런은 로그로 변환하고 적응해서 미로 전체를 뇌의 민감 구간(0.35~1.25Hz)에 맞춘다고 가정
+    const logc = -dd/9, logMin = -this.maxD/9;
+    return clamp(0.35 + 0.9*(1 - logc/logMin), 0, 2) * (1 + rnd(.02));
+  },
+  reset(){
+    for (const f of this.flies){ world.remove(f.mesh); world.remove(f.trail); }
+    this.flies = []; this.t = 0;
+    for (let i=0;i<8;i++){ const f = newFly(this.off+1.5+rnd(.2), this.off+1.5+rnd(.2), Math.random()*6.28); f.t = 0; this.flies.push(f); }
+    selFly = this.flies[0];
+  },
+  drive(b){ let s = 0; for (const k of T.readouts) s += b[k]; return s; },
+  step(dt){
+    const sub = this.fast ? 4 : 1;
+    for (let s=0; s<sub; s++){
+      this.t += dt;
+      for (const f of this.flies){
+        if (f.done) continue;
+        f.t += dt;
+        const rate = this.odor(f.x, f.z);
+        const b = brainOdor(rate); f.brain = b; f.inp = {l:rate, r:rate};
+        const D = this.drive(b);
+        if (this.brainOn){
+          if (f.dPrev == null) f.dPrev = D;
+          const dD = (D - f.dPrev) / (f.dPrev + 5);
+          f.dPrev += (D - f.dPrev) * clamp(dt*2.5, 0, 1);      // 0.4초 기억
+          if (dD < -0.004){ f.h += rnd(1) * 3.2 * dt * 6; f.speed = 1.0; f.state='cast'; }       // 약해짐 → 방향 전환
+          else if (dD > 0.002){ f.h += rnd(.15) * dt; f.speed = 2.2; f.state='surge'; }           // 세짐 → 직진
+          else { f.h += rnd(1.5) * dt * 3; f.speed = 1.6; f.state='search'; }
+        } else { f.h += rnd(1.5) * dt * 3; f.speed = 1.6; f.state='random'; }
+        const [vx,vz] = fwd(f.h), r = .18;
+        const nx = f.x + vx*f.speed*dt, nz = f.z + vz*f.speed*dt;
+        if (this.wall(nx + vx*r, nz + vz*r)){ f.h += (Math.random()<.5?1:-1)*(Math.PI/2) + rnd(.4); }
+        else { f.x = nx; f.z = nz; }
+        f.y = 0;
+        pushTrail(f);
+        const [a,bb] = this.cellAt(f.x,f.z);
+        if (a===this.c && bb===this.c){ f.done = true; (this.brainOn?this.results.on:this.results.off).push(f.t); }
+      }
+    }
+    for (const f of this.flies) drawFly(f, dt);
+    const sf = selFly, b = sf.brain || brainOdor(0);
+    brainPanel([['냄새 입력 ×50', sf.inp.l*50, sf.inp.r*50, 100], ['DNb05', b.DNb05_L, b.DNb05_R, 160], ['DNg13', b.DNg13_L, b.DNg13_R, 160], ['DNa02', b.DNa02_L, b.DNa02_R, 120], ['DNp18', b.DNp18_L, b.DNp18_R, 120]]);
+    const arrived = this.flies.filter(f=>f.done).length;
+    const avg = a => a.length ? (a.reduce((x,y)=>x+y,0)/a.length).toFixed(1)+'초' : '—';
+    $('stats').innerHTML = `이번 판(${this.brainOn?'뇌 켬':'뇌 끔'}): 도착 <span class="big">${arrived}</span>/8 · 경과 <b>${this.t.toFixed(0)}</b>초<br>누적 평균 도착 시간 — 뇌 켬 <b>${avg(this.results.on)}</b> (${this.results.on.length}마리) · 뇌 끔 <b>${avg(this.results.off)}</b> (${this.results.off.length}마리)`;
+    $('hud').textContent = `노란 선이 초파리 경로, 분홍색이 진할수록 냄새가 진합니다. 선택한 초파리 상태: ${({surge:'냄새가 세짐 → 직진',cast:'냄새가 약해짐 → 방향 전환',search:'변화 없음 → 탐색',random:'뇌 꺼짐 → 무작위'})[sf.state]||'-'}`;
+  }
+};
+
+/* ================= ③ 주광성 ================= */
+const light = {
+  init(){
+    floor(-14,-14,28,28, MAT.dark);
+    const W=[]; for (let i=-14;i<14;i++){ for (const y of [0,1]) { W.push([i,y,-14]); W.push([i,y,13]); W.push([-14,y,i]); W.push([13,y,i]); } } blocks(W, MAT.stone);
+    scene.background = new THREE.Color(0x1a1d2b); scene.fog.color.set(0x1a1d2b); hemi.intensity = .35; sun.intensity = .25;
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({map:pixTex([255,226,140],.25,41)}));
+    lamp.position.set(8.5,.5,0); world.add(lamp); this.lamp = lamp;
+    this.pl = new THREE.PointLight(0xffe08a, 2.2, 18); this.pl.position.set(8.5,1.5,0); world.add(this.pl);
+    this.on = true; this.brainOn = true; this.flies = []; this.hist = [];
+    for (let i=0;i<30;i++) this.flies.push(newFly(-6+rnd(5), rnd(9), Math.random()*6.28));
+    for (const f of this.flies) f.trail.visible = false;
+    selFly = this.flies[0];
+    camera.position.set(0, 24, 18); controls.target.set(0,0,0);
+    setControls([
+      {t:'💡 불 켬', on:true, f:b=>{ this.on=!this.on; b.classList.toggle('on',this.on); b.textContent=this.on?'💡 불 켬':'🌑 불 끔'; this.lamp.visible=this.on; this.pl.visible=this.on; }},
+      {t:'🧠 뇌 켬', on:true, f:b=>{ this.brainOn=!this.brainOn; b.classList.toggle('on',this.brainOn); b.textContent=this.brainOn?'🧠 뇌 켬':'💤 뇌 끔'; }},
+      {t:'🔀 초파리 흩기', f:()=>{ for (const f of this.flies){ f.x = rnd(11); f.z = rnd(11); f.h = Math.random()*6.28; } }}
+    ]);
+    $('honest').innerHTML = '뇌가 하는 일: 각 눈에 들어오는 빛의 세기를 시각 ON 경로 뉴런(Tm3, 한쪽 약 870개) 입력으로 넣으면, 커넥톰에서 <b>같은 쪽 하강 뉴런(DNp07·DNb05·DNbe001)</b>이 켜집니다. 초파리는 좌우 발화 차이만큼 몸을 틉니다.<br><br>하지 않는 일: 광수용세포(R1-8)에 직접 빛을 넣으면 이 모델에서는 하강 뉴런이 전혀 반응하지 않았습니다(억제성 신호인데 모델에 기본 발화가 없어서). 그래서 한 단계 뒤인 Tm3에 넣었습니다. 「발화가 센 쪽으로 돈다」는 몸 쪽 연결은 손으로 정한 가정입니다. 바닥을 클릭하면 등을 옮길 수 있습니다.';
+    const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+    this.onClick = e => {
+      const r = renderer.domElement.getBoundingClientRect();
+      const p = new THREE.Vector2((e.clientX-r.left)/r.width*2-1, -(e.clientY-r.top)/r.height*2+1);
+      ray.setFromCamera(p, camera); const hit = new THREE.Vector3();
+      if (ray.ray.intersectPlane(plane, hit) && Math.abs(hit.x)<12.5 && Math.abs(hit.z)<12.5){ this.lamp.position.set(Math.floor(hit.x)+.5,.5,Math.floor(hit.z)+.5); this.pl.position.set(this.lamp.position.x,1.5,this.lamp.position.z); }
+    };
+    let down = null;
+    renderer.domElement.addEventListener('pointerdown', this.pd = e => down = [e.clientX,e.clientY]);
+    renderer.domElement.addEventListener('pointerup', this.pu = e => { if (down && Math.hypot(e.clientX-down[0], e.clientY-down[1]) < 5) this.onClick(e); down = null; });
+  },
+  dispose(){
+    renderer.domElement.removeEventListener('pointerdown', this.pd); renderer.domElement.removeEventListener('pointerup', this.pu);
+    scene.background = new THREE.Color(0x8ec5ff); scene.fog.color.set(0x8ec5ff); hemi.intensity = .85; sun.intensity = .75;
+  },
+  eye(f, side){ // side +1 left, -1 right
+    if (!this.on) return 0;
+    const lp = this.lamp.position, dx = lp.x-f.x, dz = lp.z-f.z, d = Math.hypot(dx,dz);
+    const eh = f.h + side*0.9, ex = Math.sin(eh), ez = Math.cos(eh);
+    const cos = (dx*ex + dz*ez)/Math.max(d,1e-3);
+    return clamp(140*Math.max(0,cos)**1.5 / (1 + d*d/60), 0, 100);
+  },
+  step(dt){
+    let near = 0;
+    for (const f of this.flies){
+      const l = this.eye(f, 1), r = this.eye(f, -1);
+      const b = brain2('light', l, r); f.brain = b; f.inp = {l, r};
+      const SL = b.DNp07_L + b.DNb05_L + b.DNbe001_L, SR = b.DNp07_R + b.DNb05_R + b.DNbe001_R;
+      // d/dh fwd(h) = (cos h, -sin h) = 왼쪽 벡터 → h가 커지면 왼쪽으로 돈다. 왼쪽 발화가 크면(빛이 왼쪽) h를 키운다
+      const turn = this.brainOn ? clamp((SL - SR) * 0.03, -3, 3) : 0;
+      f.h += (turn + rnd(1.6)) * dt * 1.6;
+      const sp = 1.1 + (this.brainOn ? clamp((SL+SR)*0.004, 0, 1.2) : 0);
+      const [vx,vz] = fwd(f.h);
+      let nx = f.x + vx*sp*dt, nz = f.z + vz*sp*dt;
+      if (Math.abs(nx) > 12.6 || Math.abs(nz) > 12.6){ f.h += Math.PI*.6 + rnd(.5); nx = clamp(nx,-12.6,12.6); nz = clamp(nz,-12.6,12.6); }
+      const lp = this.lamp.position; if (Math.hypot(nx-lp.x, nz-lp.z) < .75){ f.h += Math.PI*.7; } else { f.x = nx; f.z = nz; }
+      if (Math.hypot(f.x-lp.x, f.z-lp.z) < 4) near++;
+      drawFly(f, dt);
+    }
+    const sf = selFly, b = sf.brain;
+    brainPanel([['빛 입력 (Tm3)', sf.inp.l, sf.inp.r, 100], ['DNp07', b.DNp07_L, b.DNp07_R, 140], ['DNb05', b.DNb05_L, b.DNb05_R, 140], ['DNbe001', b.DNbe001_L, b.DNbe001_R, 140]]);
+    this.hist.push(near); if (this.hist.length > 600) this.hist.shift();
+    const pct = Math.round(near/this.flies.length*100);
+    $('stats').innerHTML = `등 근처(4블록 안) <span class="big">${pct}%</span> <span class="sub">(${near}/30마리 · 무작위라면 약 6%)</span><br>불 ${this.on?'켬':'끔'} · 뇌 ${this.brainOn?'켬':'끔'}`;
+    $('hud').textContent = '바닥을 클릭하면 등을 옮길 수 있습니다. 불이나 뇌를 끄고 차이를 보세요.';
+  }
+};
+
+/* ================= ④ 먹이 (맛) ================= */
+const FEED_TH = 15;   // 먹기 문턱: 섭식 운동뉴런(CB0871+CB0701) 양쪽 평균 15Hz (손으로 정한 값)
+const FOOD = {
+  sugar: {name:'설탕물', color:0xf4f6ff},
+  bitter:{name:'쓴 먹이', color:0x7d8f2a},
+  mix:   {name:'설탕+쓴맛', color:0xb07ad8},
+  water: {name:'물', color:0x6fc3ff}
+};
+const taste = {
+  init(){
+    floor(-10,-8,20,16, MAT.plank);
+    const rim = []; for (let x=-10;x<10;x++){ rim.push([x,0,-8]); rim.push([x,0,7]); } for (let z=-7;z<7;z++){ rim.push([-10,0,z]); rim.push([9,0,z]); } blocks(rim, MAT.dirt);
+    this.fly = newFly(0,0,Math.random()*6.28); this.fly.mesh.scale.setScalar(1); this.fly.trail.visible = true;
+    selFly = this.fly;
+    this.drops = []; this.type = this.type || 'sugar';
+    if (this.S == null){ this.S = 100; this.B = 80; this.W = 100; }
+    if (!this.stats) this.stats = {sugar:{eat:0,rej:0}, bitter:{eat:0,rej:0}, mix:{eat:0,rej:0}, water:{eat:0,rej:0}};
+    this.state = 'seek'; this.timer = 0; this.target = null; this.b = interp2(E.taste,0,0); this.inp = {s:0,b:0,w:0};
+    this.msg = '바닥을 누르면 고른 먹이를 놓습니다.';
+    camera.position.set(0, 8, 7.5); controls.target.set(0,0,.5);
+    setControls([
+      {grp:'놓을 먹이 (바닥을 누르세요)'},
+      ...Object.keys(FOOD).map(k => ({t:FOOD[k].name, key:'food:'+k, on:this.type===k, f:()=>{ this.type = k; pick('food', k); }})),
+      {grp:'농도 → 맛 감각 뉴런 입력 (Hz, 새로 놓는 방울에 적용)'},
+      {t:'설탕', range:[0,100,5], v:this.S, id:'slS', f:v=>this.S=v},
+      {t:'쓴맛', range:[0,100,5], v:this.B, id:'slB', f:v=>this.B=v},
+      {t:'물', range:[0,100,5], v:this.W, id:'slW', f:v=>this.W=v},
+      {grp:''},
+      {t:'🍽️ 종류마다 2방울 놓기', f:()=>this.autoPlace(2)},
+      {t:'🧽 모두 치우기', f:()=>this.clearDrops()},
+      {t:'🗑️ 기록 지우기', f:()=>{ for (const k in this.stats) this.stats[k] = {eat:0,rej:0}; }}
+    ]);
+    $('honest').innerHTML = `뇌가 하는 일: 초파리가 방울에 닿으면 그 방울의 설탕·쓴맛 농도를 각각 <b>설탕 감각 뉴런 ${E.counts.sugar}개, 쓴맛 감각 뉴런 ${E.counts.bitter}개</b>의 발화율(Hz)로, 물은 <b>물 감각 뉴런 ${E.counts.water}개</b>로 넣습니다. 커넥톰이 낸 <b>섭식 운동뉴런(CB0871+CB0701, 설탕 신호의 가장 강한 하류) 발화가 ${FEED_TH}Hz를 넘을 때만</b> 주둥이를 뻗어 먹고, 아니면 돌아섭니다.<br><br>관찰: 설탕 100Hz → 섭식 운동뉴런 약 35Hz. 같은 설탕에 쓴맛을 50Hz 이상 섞으면 0Hz로 꺼집니다(쓴맛이 섭식을 억제). 쓴맛만 주면 아무것도 켜지지 않습니다. 물은 DNg67을 약 55Hz로 켜지만 섭식 운동뉴런은 켜지 않아서 <b>이 모델의 초파리는 물을 먹지 않습니다</b>(목마름 같은 몸 상태가 모델에 없습니다). 설탕 반응은 50Hz 아래에서 거의 0이고 75~100Hz에서 켜지는 가파른 스위치입니다.<br><br>손으로 만든 부분: 먹이 찾아 걷기(가장 가까운 안 맛본 방울로), 농도 → 발화율 변환(비례), ${FEED_TH}Hz 문턱, 주둥이·먹는 동작. 설탕·쓴맛 표와 물 표는 따로 계산된 것이라 설탕물의 「물」 성분은 넣지 않습니다.`;
+    floorClick(this, 0, p => { if (Math.abs(p.x) < 9 && Math.abs(p.z) < 6.5) this.addDrop(this.type, p.x, p.z); });
+    this.autoPlace(1);
+  },
+  dispose(){ unClick(this); },
+  addDrop(type, x, z){
+    const c = {sugar: type==='sugar'||type==='mix' ? this.S : 0, bitter: type==='bitter'||type==='mix' ? this.B : 0, water: type==='water' ? this.W : 0};
+    const mat = new THREE.MeshLambertMaterial({color:FOOD[type].color, transparent:true, opacity:.82, emissive:FOOD[type].color, emissiveIntensity:.15});
+    const mesh = new THREE.Mesh(BOX, mat); mesh.scale.set(.8,.16,.8); mesh.position.set(x,.08,z); world.add(mesh);
+    const d = {type, x, z, c, mesh, size:1, tried:false}; this.drops.push(d); return d;
+  },
+  autoPlace(n){
+    for (const k of Object.keys(FOOD)) for (let i=0;i<n;i++){
+      for (let tries=0; tries<30; tries++){
+        const x = rnd(8), z = rnd(5.5);
+        if (this.drops.every(d => Math.hypot(d.x-x, d.z-z) > 1.6) && Math.hypot(this.fly.x-x, this.fly.z-z) > 1.5){ this.addDrop(k, x, z); break; }
+      }
+    }
+  },
+  clearDrops(){ for (const d of this.drops) world.remove(d.mesh); this.drops = []; this.target = null; this.state = 'seek'; },
+  // 방울 성분 → 감각 입력(Hz) → 커넥톰 반응표
+  sense(d, frac){
+    const s = d.c.sugar*frac, bt = d.c.bitter*frac, w = d.c.water*frac;
+    this.inp = {s, b:bt, w};
+    if (d.type === 'water') return interp1(E.water, w);
+    return interp2(E.taste, s, bt);
+  },
+  walkTo(x, z, dt, sp){
+    const f = this.fly, want = Math.atan2(x-f.x, z-f.z);
+    f.h += clamp(wrapAng(want - f.h), -4*dt, 4*dt);
+    const [vx,vz] = fwd(f.h); f.x = clamp(f.x + vx*sp*dt, -9.3, 8.3); f.z = clamp(f.z + vz*sp*dt, -7.3, 6.3);
+  },
+  step(dt){
+    const f = this.fly, pb = f.mesh.userData.pb;
+    let b = null;
+    if (this.state === 'seek' || this.state === 'wander'){
+      this.inp = {s:0,b:0,w:0};
+      const cand = this.drops.filter(d => !d.tried);
+      if (cand.length){
+        this.target = cand.reduce((a,d) => Math.hypot(d.x-f.x,d.z-f.z) < Math.hypot(a.x-f.x,a.z-f.z) ? d : a);
+        this.walkTo(this.target.x, this.target.z, dt, 1.8); this.state = 'seek';
+        if (Math.hypot(this.target.x-f.x, this.target.z-f.z) < .38){ this.state = 'taste'; this.timer = 0; this.target.tried = true; this.peak = 0; }
+        this.msg = `${FOOD[this.target.type].name} 방울로 걸어갑니다…`;
+      } else {
+        this.state = 'wander'; f.h += rnd(2)*dt*3; this.walkTo(f.x+Math.sin(f.h), f.z+Math.cos(f.h), dt, 1);
+        if (Math.abs(f.x) > 9 || Math.abs(f.z) > 6.2) f.h += Math.PI*.5*dt*4;
+        this.msg = '맛볼 방울이 없습니다. 바닥을 눌러 먹이를 놓아 주세요.';
+      }
+      b = this.sense({type:'none', c:{sugar:0,bitter:0,water:0}}, 0);
+    } else if (this.state === 'taste'){
+      // 다리(발목 맛 감각)가 닿는 0.6초 동안 입력이 차오른다
+      this.timer += dt; const d = this.target, frac = clamp(this.timer/.6, 0, 1);
+      b = this.sense(d, frac); const fm = avg2(b,'feedMN'); this.peak = Math.max(this.peak, fm);
+      this.msg = `맛보는 중: 섭식 운동뉴런 ${fmt(fm)}Hz (문턱 ${FEED_TH}Hz)`;
+      if (this.timer > 1.3){
+        if (fm >= FEED_TH){ this.state = 'eat'; this.timer = 0; this.msg = `섭식 운동뉴런 ${fmt(fm)}Hz ≥ ${FEED_TH}Hz → 주둥이를 뻗어 먹습니다.`; }
+        else { this.state = 'leave'; this.timer = 0; this.stats[d.type].rej++; d.mesh.material.opacity = .35;
+          this.msg = `섭식 운동뉴런 ${fmt(fm)}Hz < ${FEED_TH}Hz → 먹지 않고 돌아섭니다. (${FOOD[d.type].name})`; f.h += Math.PI*.8 + rnd(.4); }
+      }
+    } else if (this.state === 'eat'){
+      this.timer += dt; const d = this.target; b = this.sense(d, 1);
+      d.size = Math.max(0, 1 - this.timer/3); d.mesh.scale.set(.8*Math.sqrt(d.size)+.05, .16*d.size+.01, .8*Math.sqrt(d.size)+.05);
+      if (avg2(b,'feedMN') < FEED_TH){ this.state = 'leave'; this.timer = 0; }   // 표가 바뀌면(이론상) 멈춘다
+      if (this.timer > 3){ world.remove(d.mesh); this.drops = this.drops.filter(x => x !== d); this.stats[d.type].eat++; this.state = 'seek'; this.msg = `${FOOD[d.type].name}을(를) 다 먹었습니다.`; }
+    } else if (this.state === 'leave'){
+      this.timer += dt; this.inp = {s:0,b:0,w:0}; b = interp2(E.taste,0,0);
+      const [vx,vz] = fwd(f.h); this.walkTo(f.x+vx, f.z+vz, dt, 1.8);
+      if (this.timer > 1.1) this.state = 'seek';
+    }
+    this.b = b;
+    // 주둥이: 먹을 때만 뻗고 펌프질
+    const ext = this.state === 'eat' ? .85 + .15*Math.sin(performance.now()/90) : .25;
+    pb.scale.y += (ext - pb.scale.y) * clamp(dt*10,0,1); pb.rotation.x = this.state === 'eat' ? -.15 : -.35;
+    f.y = 0; drawFly(f, dt); pushTrail(f);
+    brainPanel([['설탕 입력', this.inp.s, this.inp.s, 100], ['쓴맛 입력', this.inp.b, this.inp.b, 100], ['물 입력', this.inp.w, this.inp.w, 100],
+      ['섭식 운동뉴런', b.feedMN_L, b.feedMN_R, 60], ['DNge059', b.DNge059_L, b.DNge059_R, 60], ['DNg67', b.DNg67_L, b.DNg67_R, 60]]);
+    const fm = avg2(b,'feedMN');
+    $('stats').innerHTML = `섭식 운동뉴런 <span class="big">${fmt(fm)}</span> Hz <span class="sub">(먹기 문턱 ${FEED_TH}Hz)</span>
+      <table class="t"><tr><th>먹이</th><th>먹음</th><th>거부</th><th>새 방울 입력(Hz)</th></tr>
+      ${Object.keys(FOOD).map(k => `<tr><td>${FOOD[k].name}</td><td>${this.stats[k].eat}</td><td>${this.stats[k].rej}</td><td class="sub">${k==='water'?'물 '+this.W:k==='sugar'?'설탕 '+this.S:k==='bitter'?'쓴맛 '+this.B:this.S+'+'+this.B}</td></tr>`).join('')}</table>`;
+    $('hud').textContent = this.msg;
+  }
+};
+
+/* ================= ⑤ 그루밍 ================= */
+const DUST_N = 40;          // 화면에 보이는 먼지 알갱이 최대 수
+const CLEAN_K = 0.25;       // 먼지 제거 속도: groomMN 1Hz당 0.25%/초 (손으로 정한 값)
+const groom = {
+  init(){
+    floor(-6,-6,12,12);
+    const L=[]; for (let x=-1;x<1;x++) for (let z=-1;z<1;z++) L.push([x,0,z]); blocks(L, MAT.plank);
+    this.fly = newFly(0,0,0); this.fly.y = 1; this.fly.mesh.scale.setScalar(1.15); this.fly.trail.visible = false;
+    selFly = this.fly;
+    this.dust = 0; this.src = this.src || 'bristle'; this.phase = 0; this.b = interp2(E.groom,0,0); this.inp = 0;
+    if (!this.trials) this.trials = [];
+    this.cur = null; this.idle = 0;
+    // 먼지 알갱이: 초파리 몸 좌표(머리·더듬이 주변)에 붙인다
+    const u = this.fly.mesh.userData, dm = new THREE.MeshLambertMaterial({color:0xb9b2a4});
+    this.motes = [];
+    for (let i=0;i<DUST_N;i++){
+      const m = new THREE.Mesh(BOX, dm); m.scale.setScalar(.035 + Math.random()*.03);
+      const sx = i%2 ? 1 : -1;
+      m.position.set(sx*(.04 + Math.random()*.12), .55 + Math.random()*.18, .52 + Math.random()*.14);
+      m.visible = false; this.fly.mesh.add(m); this.motes.push(m);
+    }
+    camera.position.set(1.3, 1.9, 2.6); controls.target.set(0, 1.45, .25);
+    setControls([
+      {t:'🌫️ 더듬이에 먼지 뿌리기', f:()=>this.sprinkle(40)},
+      {grp:'먼지가 건드리는 감각 뉴런'},
+      {t:'더듬이 촉각털 (BM_Ant)', key:'src:bristle', on:this.src==='bristle', f:()=>{ this.src='bristle'; pick('src','bristle'); }},
+      {t:'존스턴 기관 JO-CE', key:'src:jo', on:this.src==='jo', f:()=>{ this.src='jo'; pick('src','jo'); }},
+      {grp:''},
+      {t:'🗑️ 기록 지우기', f:()=>{ this.trials = []; }}
+    ]);
+    $('honest').innerHTML = `뇌가 하는 일: 더듬이에 붙은 먼지 양을 <b>더듬이 촉각털 감각 뉴런(BM_Ant, ${E.counts.antenna_bristle}개)</b>의 발화율로 넣으면, 커넥톰이 <b>그루밍 운동뉴런(CB0810)</b>과 하강 뉴런 DNg84·DNg35·DNg15의 발화율을 냅니다. 앞다리 문지르기의 빠르기와 먼지가 떨어지는 속도는 <b>CB0810 발화율에 비례</b>합니다. 발화가 0이 되면 멈춥니다.<br><br>관찰: 촉각털 100Hz → CB0810 약 60Hz, 50Hz → 약 15Hz, 30Hz 이하 → 0Hz. 그래서 감각 변환에 「먼지가 한 알이라도 있으면 촉각털이 최소 50Hz로 발화한다」는 가정을 넣었습니다. 이 가정이 없으면(먼지에 비례해 발화) 먼지가 약 9% 남은 채로 그루밍이 멈춥니다. <b>존스턴 기관 JO-CE(${E.counts.JO_CE}개)만 자극하면 이 모델에서는 이 판독 뉴런들이 모두 0Hz</b>였습니다. 실제 초파리 실험에서는 JO-CE 활성화가 더듬이 그루밍을 일으킨다는 보고가 있어, 이 결과는 모델(300ms, 이 판독 뉴런들)의 한계일 수 있습니다.<br><br>손으로 만든 부분: 먼지 양 → 발화율 변환(50 + 50×√먼지비율 Hz, 먼지 0이면 0Hz), 다리 동작, 제거 속도 계수(1Hz당 ${CLEAN_K}%/초).`;
+  },
+  sprinkle(amt){
+    this.dust = clamp(this.dust + amt, 0, 100);
+    if (!this.cur) this.cur = {src:this.src, start:this.dust, t:0, groomT:0};
+    else this.cur.start = Math.max(this.cur.start, this.dust);
+    this.idle = 0;
+  },
+  step(dt){
+    const f = this.fly, u = f.mesh.userData;
+    // 감각 변환(가정): 먼지가 조금이라도 닿은 촉각털은 강하게 발화한다 → 최소 50Hz, 먼지가 많을수록 100Hz까지
+    this.inp = this.dust > 0 ? clamp(50 + 50*Math.sqrt(this.dust/100), 0, 100) : 0;
+    const b = this.src === 'bristle' ? interp2(E.groom, this.inp, 0) : interp2(E.groom, 0, this.inp);
+    this.b = b;
+    const g = avg2(b,'groomMN');
+    if (g > 0.5){
+      this.dust = Math.max(0, this.dust - CLEAN_K*g*dt);
+      this.phase += dt * (2 + g*.12) * Math.PI;
+    }
+    // 앞다리: 어깨 축으로 들어 올려 더듬이를 문지른다 (빠르기 ∝ groomMN)
+    u.front.forEach((p,i) => {
+      const want = g > 0.5 ? -2.05 + .35*Math.sin(this.phase + i*Math.PI) : 0;
+      p.rotation.x += (want - p.rotation.x) * clamp(dt*8, 0, 1);
+      p.rotation.z = (i ? 1 : -1) * (g > 0.5 ? .15 : .5);
+    });
+    const show = Math.ceil(this.dust/100*DUST_N);
+    this.motes.forEach((m,i) => m.visible = i < show);
+    if (this.cur){
+      this.cur.t += dt; if (g > 0.5) this.cur.groomT += dt;
+      this.idle = g > 0.5 ? 0 : this.idle + dt;
+      if (this.idle > 1.5 || this.dust <= 0){
+        this.trials.push({src:this.cur.src, start:this.cur.start, end:this.dust, groomT:this.cur.groomT}); this.cur = null;
+      }
+    }
+    drawFly(f, dt);
+    brainPanel([['입력 ('+(this.src==='bristle'?'촉각털':'JO-CE')+')', this.inp, this.inp, 100], ['그루밍 운동뉴런', b.groomMN_L, b.groomMN_R, 80],
+      ['DNg84', b.DNg84_L, b.DNg84_R, 100], ['DNg35', b.DNg35_L, b.DNg35_R, 100], ['DNg15', b.DNg15_L, b.DNg15_R, 100]]);
+    const row = k => { const L = this.trials.filter(x=>x.src===k), c = L.filter(x=>x.end <= 0);
+      const rem = L.length ? (L.reduce((a,x)=>a+x.end,0)/L.length).toFixed(0)+'%' : '—';
+      const tt = c.length ? (c.reduce((a,x)=>a+x.groomT,0)/c.length).toFixed(1)+'초' : '—';
+      return `<tr><td>${k==='bristle'?'촉각털':'JO-CE'}</td><td>${L.length}</td><td>${c.length}</td><td>${rem}</td><td>${tt}</td></tr>`; };
+    $('stats').innerHTML = `먼지 <span class="big">${this.dust.toFixed(0)}%</span> · 그루밍 운동뉴런 <b>${fmt(g)}</b> Hz
+      <table class="t"><tr><th>자극</th><th>시도</th><th>깨끗</th><th>남은 먼지</th><th>걸린 시간</th></tr>${row('bristle')}${row('jo')}</table>`;
+    $('hud').textContent = this.dust <= 0 ? '더듬이가 깨끗합니다. 먼지를 뿌려 보세요.'
+      : g > 0.5 ? `그루밍 운동뉴런 ${fmt(g)}Hz → 앞다리로 더듬이를 닦는 중 (먼지 ${this.dust.toFixed(0)}%)`
+      : this.src === 'jo' ? `JO-CE 입력 ${fmt(this.inp)}Hz: 그루밍 판독 뉴런이 0Hz라 닦지 않습니다 (이 모델 기준).`
+      : `먼지 ${this.dust.toFixed(0)}%: 촉각털 입력 ${fmt(this.inp)}Hz가 문턱 아래라 그루밍 운동뉴런이 0Hz입니다.`;
+  }
+};
+
+/* ================= ⑦ 3D 뇌 ================= */
+const WAVES = {loom:'루밍 (LPLC2·LC4, 양쪽)', sugar:'설탕 (맛 감각 뉴런)', antenna:'더듬이 촉각털', light_left:'왼쪽 빛 (왼쪽 Tm3)'};
+const CLS_KO = {ascending:'상행', central:'중추', descending:'하강', endocrine:'내분비', motor:'운동', optic:'시각엽', sensory:'감각', sensory_ascending:'감각 상행', visual_centrifugal:'시각 원심', visual_projection:'시각 투사'};
+const CLS_COL = {ascending:0x8a7fb8, central:0x6f86a8, descending:0xb07f7f, endocrine:0xa89a6a, motor:0xb08a5a, optic:0x5f8f8a, sensory:0x7fa07a, sensory_ascending:0x8aa07f, visual_centrifugal:0x5f7f9f, visual_projection:0x6a9a9f};
+const KEY_NAMES = {DNp01:'거대섬유 DNp01', DNp04:'DNp04', CB0871:'섭식 운동뉴런 CB0871', CB0701:'섭식 운동뉴런 CB0701', CB0810:'그루밍 운동뉴런 CB0810',
+  DNg84:'DNg84', DNg35:'DNg35', DNg15:'DNg15', DNge059:'DNge059', DNg67:'DNg67', DNp07:'DNp07', DNb05:'DNb05', DNbe001:'DNbe001'};
+const WAVE_MS = 150, PLAY_S = 6;      // 150ms를 6초로 (40배 느리게)
+const PT_VS = `attribute float size; attribute vec3 col; varying vec3 vCol; uniform float pr;
+  void main(){ vCol = col; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = size * pr * (60.0 / -mv.z); gl_Position = projectionMatrix * mv; }`;
+const PT_FS = `varying vec3 vCol; uniform float op;
+  void main(){ vec2 c = gl_PointCoord - .5; float r = dot(c,c); if (r > .25) discard; gl_FragColor = vec4(vCol, op * (1.0 - r*3.2)); }`;
+const brain3d = {
+  wave: 'loom', T: 0, playing: true,
+  build(){
+    const P = E.nb.p, N = P.length/3, sc = 1/100;
+    // FlyWire: x 증가 = 초파리 오른쪽, y 증가 = 배쪽, z 증가 = 뒤쪽 → 앞에서 본 모습(초파리 왼쪽이 화면 오른쪽)
+    this.xyz = new Float32Array(N*3);
+    for (let i=0;i<N;i++){ this.xyz[i*3] = -P[i*3]*sc; this.xyz[i*3+1] = -P[i*3+1]*sc; this.xyz[i*3+2] = -P[i*3+2]*sc; }
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0x07090f);
+    this.cam = new THREE.PerspectiveCamera(45, 1, .1, 500); this.cam.position.set(0, 2, 30);
+    this.ctl = new THREE.OrbitControls(this.cam, renderer.domElement); this.ctl.enableDamping = true; this.ctl.enabled = false;
+    this.ctl.minDistance = 6; this.ctl.maxDistance = 70;
+    // 배경: 모든 뉴런을 흐리게, 분류별 은은한 색
+    const col = new Float32Array(N*3), size = new Float32Array(N), c = new THREE.Color();
+    for (let i=0;i<N;i++){ c.setHex(CLS_COL[E.classes[E.nb.c[i]]] || 0x667788); col[i*3]=c.r*.55; col[i*3+1]=c.g*.55; col[i*3+2]=c.b*.55; size[i] = 1.6; }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(this.xyz, 3)); g.setAttribute('col', new THREE.BufferAttribute(col, 3)); g.setAttribute('size', new THREE.BufferAttribute(size, 1));
+    const pr = Math.min(devicePixelRatio, 2);
+    this.bg = new THREE.Points(g, new THREE.ShaderMaterial({vertexShader:PT_VS, fragmentShader:PT_FS, uniforms:{pr:{value:pr}, op:{value:.33}}, transparent:true, depthWrite:false}));
+    this.scene.add(this.bg);
+    this.actMat = new THREE.ShaderMaterial({vertexShader:PT_VS, fragmentShader:PT_FS, uniforms:{pr:{value:pr}, op:{value:1}}, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending});
+    this.built = true;
+  },
+  load(name){
+    this.wave = name; this.T = 0; this.playing = true;
+    if (this.act){ this.scene.remove(this.act); this.act.geometry.dispose(); }
+    const W = E.waves[name], n = W.i.length, stim = new Set(W.s);
+    const pos = new Float32Array(n*3), col = new Float32Array(n*3), size = new Float32Array(n);
+    W.i.forEach((k,j) => { pos[j*3]=this.xyz[k*3]; pos[j*3+1]=this.xyz[k*3+1]; pos[j*3+2]=this.xyz[k*3+2]; });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('col', new THREE.BufferAttribute(col, 3)); g.setAttribute('size', new THREE.BufferAttribute(size, 1));
+    this.act = new THREE.Points(g, this.actMat); this.scene.add(this.act);
+    this.W = W; this.isStim = W.i.map(k => stim.has(k));
+    this.nStim = W.s.length;
+    // 주요 뉴런 이름표
+    const lab = $('labels'); lab.innerHTML = '';
+    this.labels = [];
+    // 유형마다 가장 먼저 발화한 뉴런 하나에만 이름표 (좌우 쌍이 겹치지 않게)
+    const first = {};
+    W.i.forEach((k,j) => { const ty = E.nb.types[E.nb.ty[k]]; if (KEY_NAMES[ty] && (first[ty] == null || W.t[j] < W.t[first[ty]])) first[ty] = j; });
+    for (const ty in first){ const j = first[ty];
+      const el = document.createElement('span'); el.textContent = KEY_NAMES[ty]; lab.appendChild(el);
+      this.labels.push({el, j, v:new THREE.Vector3(pos[j*3], pos[j*3+1], pos[j*3+2]), ty, t:W.t[j]}); }
+    // 좌우 표시 (초파리 기준)
+    for (const [txt, x] of [['초파리 왼쪽 L', 9.5], ['초파리 오른쪽 R', -9.5]]){
+      const el = document.createElement('span'); el.className = 'side'; el.textContent = txt; lab.appendChild(el);
+      this.labels.push({el, v:new THREE.Vector3(x, 5.5, 0), side:true});
+    }
+    // 분류별 반응 뉴런 수 (좌/우: 초파리 기준, x 위치로 나눔)
+    const byCls = {};
+    W.i.forEach(k => { const cn = E.classes[E.nb.c[k]]; byCls[cn] = byCls[cn] || [0,0]; byCls[cn][E.nb.p[k*3] < 0 ? 0 : 1]++; });
+    this.byCls = Object.entries(byCls).sort((a,b) => (b[1][0]+b[1][1]) - (a[1][0]+a[1][1]));
+    pick('wave', name); this.syncPlay();
+  },
+  init(){
+    if (!this.built) this.build();
+    controls.enabled = false; this.ctl.enabled = true;
+    brainHead('반응한 뉴런 (분류별, 초파리 기준 좌/우)', '단위: 뉴런 수');
+    setControls([
+      {grp:'자극'},
+      ...Object.keys(WAVES).map(k => ({t:WAVES[k], key:'wave:'+k, f:()=>this.load(k)})),
+      {grp:''},
+      {t:'⏸ 멈춤', key:'play:x', f:()=>{ if (this.T >= WAVE_MS) this.T = 0; this.playing = !this.playing; this.syncPlay(); }},
+      {t:'🔁 처음부터', f:()=>{ this.T = 0; this.playing = true; this.syncPlay(); }},
+      {t:'시간 (ms)', range:[0,WAVE_MS,.5], v:0, id:'scrub', f:v=>{ this.T = v; this.playing = false; this.syncPlay(); }}
+    ]);
+    $('honest').innerHTML = `뇌가 하는 일: 점 하나가 뉴런 하나입니다(FlyWire 좌표, 몸통 위치). 흐린 점은 뇌 모양을 보여 주는 무작위 표본 약 2만 4천 개입니다. 자극을 고르면 그 감각 뉴런들에 100Hz 입력을 넣은 <b>전체 커넥톰 LIF 시뮬레이션(Shiu 외 2024)에서 각 뉴런이 처음 발화한 시각</b>대로 불이 켜집니다. 밝기는 150ms 동안의 발화 수입니다. 청록색은 직접 자극한 감각 뉴런, 노란색~흰색은 연결을 타고 켜진 뉴런입니다.<br><br>하지 않는 일: 150ms를 6초로 늘려 보여 줍니다(40배 느리게). 각 뉴런은 첫 발화 시각에 켜지고 서서히 어두워질 뿐, 이후 개별 스파이크를 다시 그리지는 않습니다. 시뮬레이션 1회(시드 1개) 결과이고, 연결선(축삭·시냅스)은 그리지 않습니다. 좌우는 초파리 기준이며 앞에서 본 모습이라 초파리 왼쪽이 화면 오른쪽입니다.`;
+    this.load(this.wave);
+    this.cam.position.set(0, 2, view.clientWidth < 600 ? 34 : 24); this.ctl.target.set(0, 0, 0);
+    resize();
+  },
+  dispose(){ controls.enabled = true; this.ctl.enabled = false; $('labels').innerHTML = ''; brainHead(); },
+  syncPlay(){
+    const b = document.querySelector('#controls button[data-key^="play:"]'); if (b) b.textContent = this.playing ? '⏸ 멈춤' : '▶ 재생';
+  },
+  step(dt){
+    if (this.playing){ this.T += dt * WAVE_MS / PLAY_S; if (this.T >= WAVE_MS){ this.T = WAVE_MS; this.playing = false; this.syncPlay(); } }
+    const W = this.W, T = this.T, g = this.act.geometry, col = g.attributes.col.array, size = g.attributes.size.array;
+    let lit = 0, litStim = 0;
+    for (let j=0;j<W.i.length;j++){
+      const st = this.isStim[j], age = T - W.t[j], k = Math.min(1, W.n[j]/15);
+      let r=0, gg=0, bb=0, s=0;
+      if (age >= 0){
+        lit++; if (st) litStim++;
+        const flash = Math.exp(-age/6), base = .35 + .65*k;
+        if (st){ r = .15*base + flash*.6; gg = .75*base + flash*.5; bb = .85*base + flash*.4; }
+        else { r = base + flash*.4; gg = (.55 + .4*k)*base + flash*.5; bb = .18*base + flash*.6; }
+        s = 3 + 3*k + flash*7;
+      } else if (st && T > 0){ r = .05; gg = .22; bb = .26; s = 2.4; }      // 자극 중이지만 아직 발화 전
+      col[j*3]=r; col[j*3+1]=gg; col[j*3+2]=bb; size[j]=s;
+    }
+    g.attributes.col.needsUpdate = true; g.attributes.size.needsUpdate = true;
+    this.lit = lit;
+    const sc = $('scrub'); if (sc && document.activeElement !== sc){ sc.value = T; sc.nextElementSibling.textContent = T.toFixed(0); }
+    const keyRows = [...new Set(this.labels.filter(l=>!l.side).map(l=>l.ty))].map(ty => {
+      const ts = this.labels.filter(l=>l.ty===ty).map(l=>l.t); return `${KEY_NAMES[ty]} <b>${Math.min(...ts).toFixed(1)}</b>ms`; });
+    $('stats').innerHTML = `이 자극에 반응한 뉴런 <span class="big">${W.i.length.toLocaleString()}</span>개 <span class="sub">(직접 자극한 감각 뉴런 ${this.nStim}개 포함)</span><br>
+      지금 켜진 뉴런 <b>${lit.toLocaleString()}</b>개 · t = <b>${T.toFixed(1)}</b> ms / ${WAVE_MS} ms
+      ${keyRows.length ? '<br><span class="sub">주요 뉴런 첫 발화:</span> '+keyRows.join(' · ') : ''}`;
+    const mx = Math.max(...this.byCls.map(([,v]) => Math.max(v[0],v[1])));
+    brainPanel(this.byCls.map(([cn, v]) => [CLS_KO[cn]||cn, v[0], v[1], mx]).slice(0,7));
+    $('hud').textContent = `${WAVES[this.wave]} · t = ${T.toFixed(1)}ms (40배 느리게) · 켜진 뉴런 ${lit}/${W.i.length} · 끌어서 돌리기, 휠/두 손가락으로 확대`;
+  },
+  render(){
+    this.ctl.update(); renderer.render(this.scene, this.cam);
+    const w = view.clientWidth, h = view.clientHeight, v = new THREE.Vector3();
+    for (const L of this.labels){
+      const on = L.side || this.T >= L.t;
+      v.copy(L.v).project(this.cam);
+      const vis = on && v.z < 1 && Math.abs(v.x) < 1.05 && Math.abs(v.y) < 1.05;
+      L.el.style.display = vis ? '' : 'none';
+      if (vis){ const hw = L.el.offsetWidth/2 + 4; L.el.style.left = clamp((v.x+1)/2*w, hw, w-hw).toFixed(0)+'px'; L.el.style.top = ((1-v.y)/2*h).toFixed(0)+'px'; }
+    }
+  }
+};
+
+/* ================= 루프 ================= */
+const MODES = {escape, maze, light, taste, groom, gene, brain3d};
+function setMode(m){
+  if (M && M.dispose) M.dispose();
+  clearWorld(); mode = m; M = MODES[m]; M.init();
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setMode(b.dataset.m));
+function resize(){ const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w,h,false); camera.aspect = w/h; camera.updateProjectionMatrix();
+  if (brain3d.cam){ brain3d.cam.aspect = w/h; brain3d.cam.updateProjectionMatrix(); } }
+addEventListener('resize', resize);
+function loop(now){
+  const dt = Math.min(.05, (now-last)/1000); last = now;
+  M.step(dt);
+  if (M.render) M.render(); else { controls.update(); renderer.render(scene, camera); }
+  requestAnimationFrame(loop);
+}
+/* ================= 게임 메뉴 ================= */
+const GAMES = [
+  {id:'swatter', t:'🪰 커넥톰 파리채', d:'천천히 다가가야 잡힌다. 거대섬유가 문턱을 넘으면 파리가 도망친다.', b:'루밍 → 거대섬유', ready:true},
+  {id:'spider', t:'🕷️ 거미 대 초파리', d:'거미가 되어 몰래 다가가 덮친다. 뒤쪽과 잎 그늘을 이용한다.', b:'루밍 → 거대섬유', ready:true},
+  {id:'herd', t:'💡 초파리 몰이', d:'빛과 냄새로 초파리 떼를 출구까지 몰아가는 퍼즐.', b:'빛 → 같은 쪽 하강 뉴런 · 냄새 · 탈출', ready:true},
+  {id:'pet', t:'🍯 초파리 키우기', d:'먹이를 주고 먼지를 털어 주며 키운다. 뇌가 싫어하는 먹이는 안 먹는다.', b:'맛 → 섭식 운동뉴런 · 그루밍', ready:true},
+  {id:'hacker', t:'🧠 신경 해커', d:'뉴런을 골라 꺼서 초파리가 원하는 행동을 하게 만드는 퍼즐.', b:'뉴런 차단 · 전체 뇌 재시뮬레이션', ready:false}
+];
+(function(){
+  const panel = $('games'), btn = $('gamesBtn');
+  $('gameCards').innerHTML = GAMES.map(g => g.ready
+    ? `<a class="gcard" href="https://fruitfly.blueming.net/${g.id}/"><span class="pill ok">플레이 →</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></a>`
+    : `<div class="gcard soon"><span class="pill">준비 중</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></div>`).join('');
+  const show = on => { panel.hidden = !on; btn.setAttribute('aria-expanded', on); };
+  btn.onclick = e => { e.preventDefault(); show(panel.hidden); };
+  $('gamesClose').onclick = e => { e.preventDefault(); show(false); };
+  addEventListener('keydown', e => { if (e.key === 'Escape') show(false); });
+  try { if (location.hash === '#games') show(true); } catch(e){}
+})();
+window.__lab = { setMode, get M(){ return M; }, get mode(){ return mode; }, brain2, brainOdor, interp1, interp2, T, E, MODES, FEED_TH, GF_TH };
+resize(); setMode('escape'); requestAnimationFrame(loop);
+</script>

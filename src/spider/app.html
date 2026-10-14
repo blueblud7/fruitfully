@@ -1,0 +1,1207 @@
+<title>거미 대 초파리</title>
+<style>
+:root{
+  --bg:#0f1712; --ink:#f3f7ee; --dim:#b9c7b4; --panel:rgba(14,24,17,.84); --panel-solid:#16231a;
+  --line:rgba(255,255,255,.14); --accent:#ffd34d; --accent-ink:#2a2100; --good:#7bd88f; --warn:#ff6b4a;
+  --l:#5aa9ff; --r:#ffb454; --star:#ffd34d;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+#app{position:relative;width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+#view{position:absolute;inset:0}
+#view canvas{display:block;width:100%;height:100%;touch-action:none}
+button{font:inherit;cursor:pointer;color:inherit}
+a{color:var(--accent)}
+
+/* 상단 바 */
+#top{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:6px;align-items:center;pointer-events:none;z-index:3}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip small{display:block;font-size:10px;color:var(--dim);letter-spacing:.02em}
+.chip b{font-size:17px}
+#time.low b{color:var(--warn)}
+#top .sp{flex:1}
+#pauseBtn{display:none}#app.playing #pauseBtn{display:inline-block}
+a.exit{text-decoration:none;display:inline-flex;align-items:center;color:var(--ink)}
+.tbtn{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;min-width:44px;min-height:40px}
+
+/* 뇌 패널 */
+#brain{position:absolute;left:10px;bottom:10px;width:min(310px,calc(100% - 20px));background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:10px 12px 9px;z-index:3;pointer-events:none;font-size:12px}
+#brain .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px}
+#brain .hd strong{font-size:13px}
+#brain .hd span{color:var(--dim);font-size:11px;white-space:nowrap}
+.brow{display:grid;grid-template-columns:72px 1fr 1fr;gap:5px;align-items:center;margin:4px 0}
+.brow.one{grid-template-columns:72px 1fr 46px}
+.brow label{color:var(--dim);font-size:11px;white-space:nowrap}
+.bar{position:relative;height:9px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:5px}
+.bar.l i{background:var(--l)} .bar.r i{background:var(--r)} .bar.gf i{background:var(--good)}
+.bar.gf{height:12px;overflow:visible}
+.bar.gf .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;border-radius:1px}
+.gfv{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+#bstate{color:var(--dim);font-size:11px;margin-top:5px;min-height:14px}
+#bstate b{color:var(--ink)}
+#gfFlash{position:absolute;left:50%;top:-14px;transform:translate(-50%,0) scale(.8);background:var(--warn);color:#fff;font-weight:800;
+  padding:4px 12px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .15s,transform .15s;white-space:nowrap}
+#gfFlash.on{opacity:1;transform:translate(-50%,0) scale(1)}
+
+#hint{position:absolute;right:10px;bottom:10px;max-width:250px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:8px 11px;font-size:12px;color:var(--dim);line-height:1.55;z-index:3;pointer-events:none}
+#hint b{color:var(--ink)}
+
+/* 터치 조작 */
+#touch{display:none}
+#app.touch #touch{display:block}
+#joy{position:absolute;left:14px;bottom:16px;width:128px;height:128px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid var(--line);z-index:6;touch-action:none}
+#joy i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.4)}
+#tbtns{position:absolute;right:14px;bottom:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-end;z-index:6}
+#pounceBtn{width:92px;height:92px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);font-weight:900;font-size:17px;touch-action:none}
+#pounceBtn.cd{background:#6b6a52;color:#ddd}
+#sneakBtn{min-width:92px;min-height:44px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:14px;font-weight:700;touch-action:none}
+#sneakBtn.on{background:var(--good);color:#0b2a12;border-color:transparent}
+
+/* 효과 */
+#fx{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:19px;color:#fff;
+  text-shadow:0 2px 0 #000a,0 0 10px #0008;white-space:nowrap}
+.pop.esc{color:#ffc9bb;font-size:14px}
+.pop.bonus{color:var(--accent);font-size:14px}
+#banner{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;z-index:5;pointer-events:none;
+  opacity:0;transition:opacity .25s;width:calc(100% - 32px)}
+#banner.on{opacity:1}
+#banner h2{font-size:clamp(26px,7vw,44px);font-weight:900;text-shadow:0 3px 0 #000a}
+#banner p{margin-top:6px;font-size:14px;background:var(--panel);display:inline-block;padding:6px 12px;border-radius:999px;max-width:100%}
+
+/* 오버레이 */
+.ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;
+  background:rgba(6,12,8,.58);backdrop-filter:blur(3px)}
+.ov[hidden]{display:none}
+.card{width:100%;max-width:560px;max-height:100%;overflow:auto;background:var(--panel-solid);border:1px solid var(--line);
+  border-radius:18px;padding:22px 20px;box-shadow:0 20px 60px #0008}
+.card h1{font-size:26px;font-weight:900;letter-spacing:-.01em}
+.card h1 em{font-style:normal;color:var(--accent)}
+.card .lead{margin-top:8px;color:var(--dim);font-size:14px;line-height:1.6}
+.card .lead b{color:var(--ink)}
+.how{margin-top:14px;display:grid;gap:8px}
+.how div{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5}
+.how kbd{flex:none;min-width:84px;text-align:center;background:#ffffff14;border:1px solid var(--line);border-radius:8px;padding:2px 6px;font:inherit;font-size:12px;font-weight:700}
+details{margin-top:14px;background:#ffffff0a;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+details summary{cursor:pointer;font-size:13.5px;font-weight:700}
+details p,details li{margin-top:8px;font-size:12.5px;line-height:1.65;color:var(--dim)}
+details ul{padding-left:18px}
+details b{color:var(--ink)}
+.row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.big{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:13px 22px;font-size:16px;font-weight:900;min-height:48px}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14px;min-height:48px}
+.best{color:var(--dim);font-size:13px}
+.best b{color:var(--ink)}
+.lvgrid{margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lvgrid button{background:#ffffff0d;border:1px solid var(--line);border-radius:10px;padding:7px 4px;min-height:52px;font-size:12px;line-height:1.3}
+.lvgrid button b{display:block;font-size:15px}
+.lvgrid button .st{color:var(--star);letter-spacing:1px;font-size:11px}
+.lvgrid button:disabled{opacity:.35;cursor:default}
+.res{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.res div{background:#ffffff0d;border-radius:10px;padding:8px;text-align:center;font-size:11px;color:var(--dim)}
+.res b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.stars{margin-top:10px;font-size:34px;letter-spacing:6px;color:#ffffff30}
+.stars .on{color:var(--star)}
+.starwhy{font-size:12px;color:var(--dim);line-height:1.6;margin-top:2px}
+.foot{margin-top:14px;font-size:12px;color:var(--dim)}
+@media (max-width:640px){
+  #hint{display:none}
+  #brain{top:62px;bottom:auto;left:10px;width:auto;right:10px;padding:7px 10px 6px}
+  #brain .hd{margin-bottom:3px}
+  .brow{margin:3px 0}
+}
+@media (max-width:480px){
+  .chip{padding:5px 7px;font-size:12px}.chip b{font-size:15px}.chip small{font-size:9px}
+  .tbtn{padding:6px 8px;font-size:12px;min-width:40px}
+  .brow{grid-template-columns:68px 1fr 1fr}.brow.one{grid-template-columns:68px 1fr 42px}
+  .card{padding:18px 15px}.card h1{font-size:22px}
+  .how kbd{min-width:70px}
+}
+</style>
+<div id="app">
+  <div id="view"></div>
+  <div id="fx"></div>
+  <div id="top">
+    <div class="chip"><small>구역</small><b id="lvTxt">1</b>/8</div>
+    <div class="chip"><small>점수</small><b id="scTxt">0</b></div>
+    <div class="chip" id="time"><small>남은 시간</small><b id="tmTxt">90</b>초</div>
+    <div class="chip"><small>사냥</small><b id="qTxt">0/2</b></div>
+    <div class="sp"></div>
+    <button class="tbtn" id="muteBtn" aria-label="소리 켜기/끄기">소리 켬</button>
+    <button class="tbtn" id="pauseBtn" aria-label="일시정지 메뉴">⏸ 일시정지</button>
+  </div>
+  <div id="brain" aria-live="off">
+    <div id="gfFlash">거대섬유 발화!</div>
+    <div class="hd"><strong>가장 가까운 파리의 뇌</strong><span id="bgain">경계심 ×1.0</span></div>
+    <div class="brow"><label>루밍 좌·우</label><div class="bar l"><i id="bInL"></i></div><div class="bar r"><i id="bInR"></i></div></div>
+    <div class="brow one"><label>거대섬유</label><div class="bar gf"><i id="bGF"></i><span class="th" id="bTh"></span></div><span class="gfv" id="bGFv">0 Hz</span></div>
+    <div class="brow"><label>DNp04 좌·우</label><div class="bar l"><i id="bP4L"></i></div><div class="bar r"><i id="bP4R"></i></div></div>
+    <div id="bstate">파리를 찾는 중…</div>
+  </div>
+  <div id="hint"><b>WASD/방향키</b> 걷기 · <b>Shift</b> 누른 채 살금살금 · <b>Space</b> 도약 · <b>Esc</b> 일시정지.<br>파리 뒤쪽 어두운 부채꼴은 <b>사각지대</b>. 잎 뒤에 숨으면 아예 안 보입니다.</div>
+  <div id="banner"><h2 id="bnT"></h2><p id="bnP"></p></div>
+
+  <div id="touch">
+    <div id="joy"><i id="knob"></i></div>
+    <div id="tbtns"><button id="sneakBtn">살금 끔</button><button id="pounceBtn">도약</button></div>
+  </div>
+
+  <div class="ov" id="startOv">
+    <div class="card">
+      <h1>거미 대 <em>초파리</em></h1>
+      <p class="lead">당신은 깡충거미입니다. 이 초파리들은 <b>진짜 초파리 뇌 배선도(FlyWire 커넥톰)</b>로 판단합니다. 당신의 몸이 파리 눈에 <b>얼마나 빨리 커지는지</b>가 뇌로 들어가고, 탈출 명령 뉴런(거대섬유)이 문턱을 넘는 순간 파리는 날아갑니다.</p>
+      <div class="how">
+        <div><kbd>걷기</kbd><span>WASD·방향키, 휴대폰은 왼쪽 조이스틱. 빨리 다가가면 크게 「루밍」합니다.</span></div>
+        <div><kbd>살금살금</kbd><span>Shift를 누르고 있거나(C로 고정) 「살금」 버튼. 천천히 커지는 물체에 파리 뇌는 둔합니다.</span></div>
+        <div><kbd>도약</kbd><span>Space·J 또는 「도약」 버튼. 1.2블록 안의 파리에게 뛰어듭니다. 도약 자체도 루밍이라 정면에서 뛰면 들킬 수 있습니다.</span></div>
+        <div><kbd>숨기</kbd><span>파리 뒤쪽 사각지대로 돌아가거나, 잎·조약돌 뒤에 숨어 시선을 끊으세요.</span></div>
+      </div>
+      <div class="lvgrid" id="lvGrid"></div>
+      <div class="row"><button class="big" id="startBtn">1구역부터 시작</button><span class="best">최고 점수 <b id="bestTxt">0</b></span><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로</a></div>
+      <details>
+        <summary>어떻게 작동하나요? (정직한 설명)</summary>
+        <p id="metaLine"></p>
+        <p><b>커넥톰이 정하는 것</b></p>
+        <ul>
+          <li><b>도망칠지 말지:</b> 파리마다 매 순간 거미의 겉보기 크기 θ = 2·atan(r/d)와 그 변화 속도 dθ/dt를 계산해 눈별 루밍 감지 뉴런(LPLC2+LC4) 입력 = clamp(dθ/dt·60, 0, 100)Hz로 넣습니다. 미리 계산한 전뇌 반응표를 보간해 거대섬유(DNp01) 좌우 평균이 <b>45Hz를 넘을 때만</b> 탈출합니다. 거리가 아니라 「커지는 속도」라서, 가까워도 천천히 오면 버팁니다.</li>
+          <li><b>어느 쪽으로 뛸지:</b> 위협 쪽 눈에서 켜지는 DNp04의 좌우 차이로 옆 방향을 정하고, 위협 반대쪽으로 뜁니다.</li>
+          <li><b>연쇄 탈출:</b> 「경보」 규칙은 없습니다. 이웃 파리가 뛰어오르는 모습이 다른 파리 눈에 루밍으로 들어가 같은 반응표를 거칠 뿐입니다(파리 크기 r=0.15블록).</li>
+          <li><b>햇살 쪽으로 걷기(5·8구역):</b> 햇빛을 눈별 Tm3(시각 ON 경로) 입력으로 넣고, 같은 쪽에서 켜지는 DNp07+DNb05의 좌우 차이만큼 방향을 틉니다.</li>
+        </ul>
+        <p id="measLine"></p>
+        <p><b>손으로 만든 것 (가정)</b></p>
+        <ul>
+          <li>눈의 시야: 정면 ±15°는 두 눈이 겹쳐 보고, <b>뒤쪽 ±25°(모두 50°)는 사각지대</b>로 두었습니다. 실제 초파리의 뒤쪽 사각은 대략 이 정도지만 정확한 값은 아닙니다. 머리 위 60° 이상은 두 눈 모두 봅니다.</li>
+          <li>가림: 파리 눈에서 거미 몸통까지 직선이 잎·과일·조약돌에 막히면 시각 입력 0.</li>
+          <li>거미 크기 r=0.4블록, 걷기 2.6·살금 0.7·도약 6블록/초, dθ/dt→Hz 변환, 30ms 평활, 점프 준비 40~110ms, 털 고르는 중 감각 이득 0.7배, 구역별 「경계심」(감각 이득 0.8~1.5배, 뇌 출력은 그대로), 햇빛 세기 변환과 회전 이득, 파리의 걷기·먹기·털 고르기·비행.</li>
+          <li>반응표는 300ms 정상상태 발화율이라 밀리초 단위 신경 지연은 없습니다. 땅의 진동·냄새·소리 같은 다른 감각은 넣지 않았습니다(실제 파리는 진동도 느낍니다).</li>
+        </ul>
+      </details>
+      <p class="foot">초파리 뇌 실험실 → <a href="https://fruitfly.blueming.net/" target="_blank" rel="noopener">fruitfly.blueming.net</a></p>
+    </div>
+  </div>
+
+  <div class="ov" id="endOv" hidden>
+    <div class="card">
+      <h1 id="ovTitle">구역 클리어!</h1>
+      <div class="stars" id="ovStars"><span>★</span><span>★</span><span>★</span></div>
+      <p class="starwhy" id="ovWhy"></p>
+      <p class="lead" id="ovLead"></p>
+      <div class="res">
+        <div><b id="rScore">0</b>점수</div>
+        <div><b id="rKills">0</b>사냥</div>
+        <div><b id="rEsc">0</b>들킴(거대섬유)</div>
+        <div><b id="rCas">0</b>연쇄 탈출</div>
+        <div><b id="rAmb">0</b>사각지대 기습</div>
+        <div><b id="rBest">0</b>최고 점수</div>
+      </div>
+      <div class="row"><button class="big" id="nextBtn">다음 구역</button><button class="ghost" id="retryBtn">다시 하기</button><button class="ghost" id="menuBtn">처음 화면</button><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로</a></div>
+    </div>
+  </div>
+  <div class="ov" id="pauseOv" hidden>
+    <div class="card">
+      <h1>일시정지</h1>
+      <p class="lead">거미도 파리도 시간도 멈췄습니다. Esc나 P를 다시 누르면 이어서 합니다.</p>
+      <div class="row"><button class="big" id="resumeBtn">계속하기</button><button class="ghost" id="restartBtn">처음부터 다시</button><button class="ghost" id="quitBtn">처음 화면</button><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로 나가기</a></div>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+const T = /*DATA*/null;
+
+/* ================= 커넥톰 반응표 보간 ================= */
+function seg(levels, x){
+  x = Math.max(levels[0], Math.min(levels[levels.length-1], x));
+  let i = 0; while (i < levels.length-2 && levels[i+1] <= x) i++;
+  return [i, (x-levels[i])/(levels[i+1]-levels[i])];
+}
+function interp(tb, keys, l, r){
+  const L = T.levels2d, [i,fi] = seg(L,l), [j,fj] = seg(L,r);
+  const a = tb[L[i]+','+L[j]], b = tb[L[i+1]+','+L[j]], c = tb[L[i]+','+L[j+1]], d = tb[L[i+1]+','+L[j+1]];
+  const o = {}; for (const k of keys) o[k] = a[k]*(1-fi)*(1-fj) + b[k]*fi*(1-fj) + c[k]*(1-fi)*fj + d[k]*fi*fj;
+  return o;
+}
+const LOOM_K = ['DNp01_L','DNp01_R','DNp04_L','DNp04_R'];
+const LIGHT_K = ['DNp07_L','DNp07_R','DNb05_L','DNb05_R'];
+const brainLoom = (l, r) => interp(T.loom, LOOM_K, l, r);
+const brainLight = (l, r) => interp(T.light, LIGHT_K, l, r);
+
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+const rand = (a,b) => a + Math.random()*(b-a);
+const $ = id => document.getElementById(id);
+const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
+const DEG = Math.PI/180;
+const fwdv = h => [Math.sin(h), Math.cos(h)];
+const leftv = h => [Math.cos(h), -Math.sin(h)];
+
+/* ================= 상수 ================= */
+const GF_TH = 45;            // 거대섬유 탈출 문턱 (Hz)
+const SP_R = 0.40;           // 거미 겉보기 크기 반지름 (블록)
+const FLY_R = 0.15;          // 뛰는 이웃 파리의 겉보기 반지름
+const WALK_V = 2.6, SNEAK_V = 0.7, ACC = 10;
+const POUNCE_R = 1.25, POUNCE_V = 6, POUNCE_CD = 1.0, CATCH_R = 0.45;
+const SP_COL = 0.32;         // 거미 충돌 반경
+const OVERLAP = 15, BLIND = 25;   // 정면 두 눈 겹침 ±15°, 뒤 사각지대 ±25° (손으로 정함)
+const GROOM_GAIN = 0.7;
+const LIGHT_TURN = 1.6;      // DN 좌우차 100Hz당 회전 (rad/s) — 손으로 정함
+
+/* ================= 구역 정의 =================
+   좌표: x 오른쪽, z 아래(화면 앞쪽). 장애물 종류: fruit(종류), leaf(잎 벽), peb(조약돌), flower(꽃) */
+const LEVELS = [
+  {name:'잎사귀 마당', w:16, h:12, flies:2, quota:2, time:90, gain:0.8, wander:[16,26], start:[-6,4],
+   tip:'처음엔 천천히. 파리 뒤쪽 부채꼴(사각지대)로 돌아가 보세요.',
+   objs:[{k:'fruit',t:'straw',x:2,z:-1},{k:'peb',x:-3,z:-3,w:1,d:.8},{k:'flower',x:-5,z:-3.5},{k:'flower',x:6,z:3.5}]},
+  {name:'딸기 두 알', w:18, h:12, flies:3, quota:3, time:90, gain:0.9, wander:[15,24], start:[-7,4],
+   tip:'먹는 파리는 과일을 바라봅니다 — 그 등 뒤가 열려 있어요.',
+   objs:[{k:'fruit',t:'straw',x:-3,z:-2},{k:'fruit',t:'straw',x:4,z:2},{k:'peb',x:0,z:3,w:1.2,d:.8},{k:'peb',x:6,z:-3,w:.8,d:.8},{k:'flower',x:-7,z:-3}]},
+  {name:'큰 잎 그늘', w:18, h:13, flies:3, quota:3, time:95, gain:1.0, wander:[14,22], start:[-7,5],
+   tip:'잎 뒤에서는 아무리 빨리 걸어도 안 보입니다. 나올 때만 천천히.',
+   objs:[{k:'fruit',t:'orange',x:1,z:-1},{k:'leaf',x:-2.5,z:-3,len:3.5,dir:'z',hgt:1.8},{k:'leaf',x:-1,z:2,len:4,dir:'x',hgt:1.6},
+         {k:'leaf',x:4.5,z:-2.5,len:3,dir:'z',hgt:1.7},{k:'leaf',x:-5.5,z:1,len:2.5,dir:'x',hgt:1.5},{k:'peb',x:6,z:3,w:1,d:1}]},
+  {name:'수박 조각', w:18, h:13, flies:5, quota:4, time:100, gain:1.0, wander:[16,26], start:[-7,5], groom:.45,
+   tip:'한 마리가 뛰면 그 모습이 이웃 눈에 루밍으로 들어갑니다. 무리 가장자리부터.',
+   objs:[{k:'fruit',t:'melon',x:0,z:-1.5},{k:'leaf',x:-5,z:2.5,len:3,dir:'x',hgt:1.5},{k:'leaf',x:5,z:3,len:2.5,dir:'z',hgt:1.6},{k:'peb',x:-6,z:-3,w:1,d:1}]},
+  {name:'햇살 틈', w:18, h:13, flies:4, quota:4, time:100, gain:1.1, wander:[18,28], start:[-7,5], light:[5,-3.5],
+   tip:'파리는 햇빛 쪽으로 걸어갑니다(시각 ON 경로). 빛 웅덩이 근처에 숨을 곳을 찾으세요.',
+   objs:[{k:'fruit',t:'apple',x:-3.5,z:-1.5},{k:'leaf',x:2,z:-1,len:3,dir:'z',hgt:1.7},{k:'leaf',x:6,z:0,len:2.5,dir:'x',hgt:1.5},
+         {k:'peb',x:-1,z:3,w:1,d:.8},{k:'flower',x:7,z:-5},{k:'flower',x:-7,z:-4}]},
+  {name:'꽃밭', w:20, h:14, flies:4, quota:5, time:120, gain:1.2, wander:[14,22], start:[-8,5],
+   tip:'경계심이 올라 정면 살금도 위험해집니다. 줄기와 잎을 엄폐물로.',
+   objs:[{k:'fruit',t:'grape',x:3,z:-2},{k:'fruit',t:'straw',x:-4,z:1},{k:'flower',x:0,z:-3},{k:'flower',x:1,z:1.5},{k:'flower',x:-2,z:-1},
+         {k:'flower',x:6,z:1},{k:'flower',x:-6,z:-3},{k:'leaf',x:5.5,z:-4.5,len:3,dir:'x',hgt:1.6},{k:'leaf',x:-1.5,z:4,len:3.5,dir:'x',hgt:1.6},
+         {k:'leaf',x:-7.5,z:1,len:2.5,dir:'z',hgt:1.5}]},
+  {name:'떨어진 사과', w:20, h:14, flies:6, quota:6, time:120, gain:1.35, wander:[16,26], start:[-8,5], groom:.4,
+   tip:'정면에선 살금살금도 1.2블록 전에 들킵니다. 뒤나 옆, 엄폐물이 답입니다.',
+   objs:[{k:'fruit',t:'apple',x:-3,z:-2},{k:'fruit',t:'apple',x:4,z:1.5},{k:'fruit',t:'orange',x:3,z:-4},{k:'peb',x:0,z:0,w:1.2,d:1},
+         {k:'peb',x:-6,z:2,w:1,d:1},{k:'leaf',x:7,z:-2,len:3,dir:'z',hgt:1.7},{k:'leaf',x:-1,z:4,len:3,dir:'x',hgt:1.6},{k:'flower',x:-7,z:-4}]},
+  {name:'포도 넝쿨 끝', w:22, h:15, flies:6, quota:6, time:150, gain:1.5, wander:[16,26], start:[-9,5.5], light:[-5,-4], groom:.4,
+   tip:'마지막 구역. 가장 예민한 파리들입니다. 사각지대와 잎을 모두 쓰세요.',
+   objs:[{k:'fruit',t:'grape',x:2,z:-2},{k:'fruit',t:'melon',x:-2,z:3},{k:'fruit',t:'straw',x:6,z:3},{k:'leaf',x:-1.5,z:-3,len:3,dir:'z',hgt:1.8},
+         {k:'leaf',x:5,z:-1,len:3.5,dir:'x',hgt:1.6},{k:'leaf',x:-6,z:0,len:3,dir:'x',hgt:1.6},{k:'leaf',x:1,z:5.5,len:3,dir:'x',hgt:1.5},
+         {k:'peb',x:8,z:-4,w:1,d:1},{k:'flower',x:-8,z:-5},{k:'flower',x:9,z:5}]},
+];
+
+/* ================= 렌더 기본 ================= */
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const SKY = 0xbfdcc4;
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(SKY, 20, 42);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+scene.add(new THREE.HemisphereLight(0xfffbe8, 0x4d5e3a, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.6); sun.position.set(-6, 18, 9); scene.add(sun);
+
+function pixTex(base, noise, seed, pattern){
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d'); let s = seed;
+  const r = () => (s = (s*16807) % 2147483647) / 2147483647;
+  for (let y=0;y<16;y++) for (let x=0;x<16;x++){
+    let k = 1 + (r()-0.5)*noise, col = base;
+    if (pattern==='seed' && r() < .06) col = [250,220,90], k = 1;
+    if (pattern==='vein' && (x===7||x===8||Math.abs(x-7.5)===y%8)) k *= .8;
+    if (pattern==='grass' && r() < .12) k *= 1.25;
+    if (pattern==='stripe' && (y===5||y===10)) col = [235,230,215], k = 1;
+    if (pattern==='mesh' && (x%3===0||y%3===0)) k *= .75;
+    g.fillStyle = `rgb(${clamp(col[0]*k,0,255)|0},${clamp(col[1]*k,0,255)|0},${clamp(col[2]*k,0,255)|0})`;
+    g.fillRect(x,y,1,1);
+  }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; return t;
+}
+const lam = (base, noise, seed, pat) => new THREE.MeshLambertMaterial({map: pixTex(base, noise, seed, pat)});
+const MAT = {
+  grassA: lam([104,160,74],.18,3,'grass'), grassB: lam([92,148,66],.18,5,'grass'), soil: lam([120,92,62],.25,7),
+  hedge: lam([62,118,52],.22,9,'grass'), leaf: lam([70,150,60],.16,11,'vein'), leafD: lam([52,118,46],.16,13,'vein'),
+  stem: lam([84,140,60],.15,15), peb: lam([150,146,140],.22,17), pebD: lam([118,114,110],.22,19),
+  straw: lam([214,40,52],.18,21,'seed'), strawTop: lam([60,140,50],.2,23), orange: lam([240,140,30],.15,25), orangeIn: lam([252,200,90],.12,27),
+  melon: lam([232,70,80],.15,29,'seed'), rind: lam([60,140,60],.18,31), rindW: lam([236,240,210],.08,33),
+  apple: lam([200,36,40],.16,35), appleY: lam([230,200,80],.15,37), grape: lam([110,50,140],.18,39), grapeD: lam([84,36,110],.18,41),
+  petalA: lam([250,236,120],.12,43), petalB: lam([248,170,200],.12,45), petalC: lam([250,250,250],.08,47), core: lam([240,170,40],.2,49),
+};
+const BOX = new THREE.BoxGeometry(1,1,1);
+let world = null;           // 구역마다 다시 만드는 그룹
+function vox(list, mat, size){
+  const geo = size === 1 ? BOX : new THREE.BoxGeometry(size, size, size);
+  const m = new THREE.InstancedMesh(geo, mat, list.length), o = new THREE.Object3D();
+  list.forEach((p,i)=>{ o.position.set(p[0],p[1],p[2]); o.updateMatrix(); m.setMatrixAt(i,o.matrix); });
+  world.add(m); return m;
+}
+
+/* 장애물 = 축 정렬 상자 {x0,x1,z0,z1,y0,y1} — 충돌과 시선 가림에 같이 쓴다 */
+let OBST = [], FRUITS = [], BOUNDS = {x0:-8,x1:8,z0:-6,z1:6}, LIGHT = null;
+function addOb(x0,x1,z0,z1,y0,y1){ OBST.push({x0,x1,z0,z1,y0,y1}); }
+
+function buildFruit(o){
+  const S = .25, V = {};
+  const put = (mat, x,y,z) => (V[mat] = V[mat] || []).push([x,y,z]);
+  let rx=.8, ry=1, rz=.8, top=1;
+  if (o.t === 'straw'){
+    rx = rz = .75; ry = 1.1;
+    for (let x=-rx;x<=rx;x+=S) for (let z=-rz;z<=rz;z+=S) for (let y=S/2;y<ry;y+=S){
+      const k = y/ry, rr = rx*(1-.45*k*k)*(y<.25?.8:1);
+      if (x*x+z*z <= rr*rr) put(k>.86 ? 'strawTop' : 'straw', o.x+x, y, o.z+z);
+    }
+    top = ry;
+  } else if (o.t === 'orange'){
+    rx = rz = .95; ry = .6;
+    for (let x=-rx;x<=rx;x+=S) for (let z=-rz;z<=rz;z+=S) for (let y=S/2;y<ry;y+=S){
+      const q = x*x+z*z; if (q > rx*rx) continue;
+      put(y > ry-S && q < (rx-.25)*(rx-.25) ? 'orangeIn' : 'orange', o.x+x, y, o.z+z);
+    }
+    top = ry;
+  } else if (o.t === 'melon'){
+    rx = 1.9; rz = .55; ry = 1.2;
+    for (let x=-rx;x<=rx;x+=S) for (let z=-rz;z<=rz;z+=S){
+      const hh = ry*(1-Math.abs(x)/rx*.75);
+      for (let y=S/2;y<hh;y+=S) put(y<.3 ? 'rind' : y<.5 ? 'rindW' : 'melon', o.x+x, y, o.z+z);
+    }
+    top = ry;
+  } else if (o.t === 'apple'){
+    rx = rz = .8; ry = 1.3;
+    const c = .65;
+    for (let x=-rx;x<=rx;x+=S) for (let z=-rz;z<=rz;z+=S) for (let y=S/2;y<ry;y+=S){
+      if (x*x+z*z+(y-c)*(y-c) <= .8*.8) put(x>.35 && y>.7 ? 'appleY' : 'apple', o.x+x, y, o.z+z);
+    }
+    put('strawTop', o.x, 1.5, o.z); top = 1.45;
+  } else if (o.t === 'grape'){
+    rx = rz = .9; ry = 1;
+    const balls = [[-.45,.3,-.3],[.4,.3,-.35],[0,.3,.4],[0,.75,0],[-.4,.3,.35],[.45,.3,.3]];
+    balls.forEach(([bx,by,bz],i) => {
+      for (let x=-.375;x<=.375;x+=S) for (let z=-.375;z<=.375;z+=S) for (let y=-.375;y<=.375;y+=S)
+        if (x*x+y*y+z*z <= .4*.4) put(i%2 ? 'grapeD' : 'grape', o.x+bx+x, by+.12+y, o.z+bz+z);
+    });
+    top = 1.1;
+  }
+  for (const k in V) vox(V[k], MAT[k], S);
+  addOb(o.x-rx, o.x+rx, o.z-rz, o.z+rz, 0, top);
+  FRUITS.push({x:o.x, z:o.z, rx, rz});
+}
+function buildLeaf(o){
+  // 땅에 선 잎 한 장: 0.5블록 기둥을 이어 붙인 벽, 가운데가 높다
+  const n = Math.max(2, Math.round(o.len/.5)), V = [], D = [];
+  for (let i=0;i<n;i++){
+    const u = (i+.5)/n, hh = o.hgt*(.55+.45*Math.sin(Math.PI*u));
+    const cx = o.dir==='x' ? o.x - o.len/2 + (i+.5)*.5 : o.x, cz = o.dir==='z' ? o.z - o.len/2 + (i+.5)*.5 : o.z;
+    for (let y=.25;y<hh;y+=.5) ((i+Math.floor(y*2))%3 ? V : D).push([cx, y, cz]);
+    const hx = o.dir==='x' ? .25 : .14, hz = o.dir==='z' ? .25 : .14;
+    addOb(cx-hx, cx+hx, cz-hz, cz+hz, 0, Math.ceil(hh*2)/2);
+  }
+  const L = vox(V, MAT.leaf, .5), M = vox(D, MAT.leafD, .5);
+  const sc = o.dir==='x' ? [1,1,.55] : [.55,1,1];
+  for (const m of [L,M]){ const mt = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+    for (let i=0;i<m.count;i++){ m.getMatrixAt(i, mt); mt.decompose(p,q,s); s.set(...sc); mt.compose(p,q,s); m.setMatrixAt(i, mt); } }
+}
+function buildPeb(o){
+  const V = [], D = [];
+  for (let x=-o.w/2+.125;x<o.w/2;x+=.25) for (let z=-o.d/2+.125;z<o.d/2;z+=.25){
+    const e = 1 - Math.max(Math.abs(x)/(o.w/2), Math.abs(z)/(o.d/2))**3, hh = .35 + .3*e;
+    for (let y=.125;y<hh;y+=.25) ((x+z)*4 % 2 ? D : V).push([o.x+x, y, o.z+z]);
+  }
+  vox(V, MAT.peb, .25); vox(D, MAT.pebD, .25);
+  addOb(o.x-o.w/2, o.x+o.w/2, o.z-o.d/2, o.z+o.d/2, 0, .6);
+}
+let flowerN = 0;
+function buildFlower(o){
+  const st = []; for (let y=.125;y<2.4;y+=.25) st.push([o.x, y, o.z]);
+  vox(st, MAT.stem, .25);
+  const pet = [MAT.petalA, MAT.petalB, MAT.petalC][flowerN++ % 3], P = [];
+  for (let x=-.625;x<=.625;x+=.25) for (let z=-.625;z<=.625;z+=.25){ const q = x*x+z*z; if (q > .45 && q < .75*.75+.05 || q <= .45 && q > .1) P.push([o.x+x, 2.5, o.z+z]); }
+  vox(P, pet, .25); vox([[o.x,2.55,o.z],[o.x+.25,2.55,o.z],[o.x,2.55,o.z+.25],[o.x+.25,2.55,o.z+.25]].map(p=>[p[0]-.125,p[1],p[2]-.125]), MAT.core, .25);
+  addOb(o.x-.13, o.x+.13, o.z-.13, o.z+.13, 0, 2.4);
+}
+let lightMesh = null;
+function buildWorld(lv){
+  if (world){ world.traverse(o => { if (o.isInstancedMesh && o.geometry !== BOX) o.geometry.dispose(); }); scene.remove(world); }
+  world = new THREE.Group(); scene.add(world);
+  OBST = []; FRUITS = []; flowerN = 0;
+  const W = lv.w/2, H = lv.h/2;
+  BOUNDS = {x0:-W, x1:W, z0:-H, z1:H};
+  const A = [], B = [], S = [];
+  for (let x=-W-9;x<W+9;x++) for (let z=-H-4;z<H+6;z++){
+    const n = Math.sin(x*1.7+z*.9)*Math.cos(z*1.3-x*.4);
+    (n > .55 ? S : (x+z)&1 ? A : B).push([x+.5, -.5, z+.5]);
+  }
+  vox(A, MAT.grassA, 1); vox(B, MAT.grassB, 1); vox(S, MAT.soil, 1);
+  // 가장자리 풀숲 (벽)
+  const E = [];
+  const N = [];   // 카메라 쪽(아래) 가장자리는 낮은 풀(반 블록)로 — 거미를 가리지 않게
+  for (let x=-W-1;x<W+1;x++){ const hh = 1 + ((x*7-H*3)&1); for (let y=0;y<hh;y++) E.push([x+.5, y+.5, -H-.5]);
+    for (const dx of [.25,.75]) for (const dz of [.25,.75]) if (((x*3+dx*4+dz*8)|0)%3) N.push([x+dx, .25, H+dz]); }
+  vox(N, MAT.hedge, .5);
+  for (let z=-H;z<H;z++){ for (const x of [-W-1, W]) { const hh = 1 + ((z*5+x)&1); for (let y=0;y<hh;y++) E.push([x+.5, y+.5, z+.5]); } }
+  vox(E, MAT.hedge, 1);
+  for (const o of lv.objs){
+    if (o.k === 'fruit') buildFruit(o); else if (o.k === 'leaf') buildLeaf(o); else if (o.k === 'peb') buildPeb(o); else if (o.k === 'flower') buildFlower(o);
+  }
+  LIGHT = lv.light ? {x:lv.light[0], z:lv.light[1]} : null;
+  if (LIGHT){
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.6, 14, 20, 1, true),
+      new THREE.MeshBasicMaterial({color:0xfff2b0, transparent:true, opacity:.16, depthWrite:false, side:THREE.DoubleSide}));
+    beam.position.set(LIGHT.x, 7, LIGHT.z); world.add(beam);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(1.7, 28), new THREE.MeshBasicMaterial({color:0xfff6c8, transparent:true, opacity:.45, depthWrite:false}));
+    disc.rotation.x = -Math.PI/2; disc.position.set(LIGHT.x, .012, LIGHT.z); world.add(disc);
+    lightMesh = disc;
+  }
+}
+
+/* 충돌 · 가림 */
+function hitsOb(x, z, rad, ymax){
+  if (x < BOUNDS.x0+rad || x > BOUNDS.x1-rad || z < BOUNDS.z0+rad || z > BOUNDS.z1-rad) return true;
+  for (const b of OBST){ if (b.y0 > (ymax==null ? .5 : ymax)) continue;
+    if (x > b.x0-rad && x < b.x1+rad && z > b.z0-rad && z < b.z1+rad) return true; }
+  return false;
+}
+function segBlocked(ax,ay,az, bx,by,bz){
+  const dx = bx-ax, dy = by-ay, dz = bz-az;
+  for (const b of OBST){
+    let t0 = 0, t1 = 1, ok = true;
+    for (const [o,d,lo,hi] of [[ax,dx,b.x0,b.x1],[ay,dy,b.y0,b.y1],[az,dz,b.z0,b.z1]]){
+      if (Math.abs(d) < 1e-9){ if (o < lo || o > hi){ ok = false; break; } }
+      else { let u = (lo-o)/d, v = (hi-o)/d; if (u > v) [u,v] = [v,u]; t0 = Math.max(t0,u); t1 = Math.min(t1,v); if (t0 > t1){ ok = false; break; } }
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
+/* ================= 거미 ================= */
+const spider = new THREE.Group();
+const SPM = {
+  body: new THREE.MeshLambertMaterial({map: pixTex([46,38,34],.25,61,'stripe')}), dark: new THREE.MeshLambertMaterial({color:0x221a16}),
+  ceph: new THREE.MeshLambertMaterial({map: pixTex([60,50,44],.22,63)}), eye: new THREE.MeshPhongMaterial({color:0x0b0b10, shininess:120, specular:0x8899aa}),
+  glint: new THREE.MeshBasicMaterial({color:0xffffff}), palp: new THREE.MeshLambertMaterial({color:0xe8dcc8}), leg: new THREE.MeshLambertMaterial({color:0x3a2e28}),
+  band: new THREE.MeshLambertMaterial({color:0xcfc4b0})
+};
+const spLegs = [];
+(function(){
+  const add = (w,h,d,mat,x,y,z,parent) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); m.position.set(x,y,z); (parent||spider).add(m); return m; };
+  add(.5,.38,.55, SPM.body, 0,.3,-.36);                 // 배
+  add(.5,.3,.46, SPM.ceph, 0,.3,.12);                   // 머리가슴
+  add(.36,.06,.3, SPM.band, 0,.47,-.36);
+  for (const sx of [-1,1]){
+    add(.13,.13,.06, SPM.eye, sx*.085,.33,.36); add(.035,.035,.02, SPM.glint, sx*.085+.03,.37,.39);   // 큰 앞눈
+    add(.06,.06,.04, SPM.eye, sx*.2,.36,.34);  add(.05,.05,.05, SPM.eye, sx*.22,.45,.2);
+    add(.08,.1,.1, SPM.palp, sx*.08,.18,.42);               // 더듬이다리
+  }
+  for (const sx of [-1,1]) for (let i=0;i<4;i++){
+    const hip = new THREE.Group(); hip.position.set(sx*.22, .28, .26 - i*.14); spider.add(hip);
+    const up = add(.36,.07,.07, SPM.leg, sx*.18,.06,0, hip); up.rotation.z = sx*-.5;
+    const lo = add(.07,.36,.07, i===0 ? SPM.band : SPM.leg, sx*.36,-.06,0, hip);
+    hip.rotation.y = sx*(i-1.5)*-.32;
+    spLegs.push({hip, sx, i, base:hip.rotation.y});
+  }
+})();
+spider.scale.setScalar(1.12); scene.add(spider);
+const spShadow = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({color:0, transparent:true, opacity:.3, depthWrite:false}));
+spShadow.rotation.x = -Math.PI/2; scene.add(spShadow);
+const rangeRing = new THREE.Mesh(new THREE.RingGeometry(POUNCE_R-.04, POUNCE_R, 48), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:.22, depthWrite:false, side:THREE.DoubleSide}));
+rangeRing.rotation.x = -Math.PI/2; scene.add(rangeRing);
+const sp = {x:0, y:0, z:0, h:Math.PI, vx:0, vz:0, mode:'walk', cd:0, lock:0, pt:0, gait:0, sneak:false};
+const inp = {kx:0, kz:0, jx:0, jz:0, sneakHold:false, sneakToggle:false, pounce:false, bot:null};
+
+/* ================= 초파리 ================= */
+const FLY_S = 0.42;
+const FM = {
+  body: new THREE.MeshLambertMaterial({color:0xb08848}), dark: new THREE.MeshLambertMaterial({color:0x3a2a1c}),
+  eye: new THREE.MeshLambertMaterial({color:0xe02a1f, emissive:0x500000}),
+  wing: new THREE.MeshLambertMaterial({color:0xeaf3ff, transparent:true, opacity:.6, side:THREE.DoubleSide}),
+};
+const FG = {
+  thorax: new THREE.BoxGeometry(.5,.45,.6), head: new THREE.BoxGeometry(.42,.36,.3), eye: new THREE.BoxGeometry(.16,.24,.2),
+  wing: new THREE.BoxGeometry(.5,.02,.75), leg: new THREE.BoxGeometry(.05,.3,.05),
+  abd: [0,1,2].map(i => new THREE.BoxGeometry(.46-i*.08,.38-i*.06,.18))
+};
+function makeFly(){
+  const g = new THREE.Group();
+  const add = (geo, mat, x,y,z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); g.add(m); return m; };
+  add(FG.thorax, FM.body, 0,.45,0);
+  for (let i=0;i<3;i++) add(FG.abd[i], i%2?FM.dark:FM.body, 0,.42,-.38-i*.17);
+  add(FG.head, FM.body, 0,.5,.42);
+  add(FG.eye, FM.eye, -.2,.55,.45); add(FG.eye, FM.eye, .2,.55,.45);
+  const wl = add(FG.wing, FM.wing, -.32,.7,-.25), wr = add(FG.wing, FM.wing, .32,.7,-.25);
+  const legs = [];
+  for (const sx of [-1,1]) for (let i=0;i<3;i++){ const l = add(FG.leg, FM.dark, sx*.28,.18,.2-i*.2); l.rotation.z = sx*.5; legs.push(l); }
+  g.scale.setScalar(FLY_S);
+  g.userData = {wl, wr, legs};
+  return g;
+}
+/* 노린 파리 표시: 고리 + 사각지대 부채꼴 */
+const ring = new THREE.Mesh(new THREE.RingGeometry(.28,.36,24), new THREE.MeshBasicMaterial({color:0x7bd88f, transparent:true, opacity:.9, depthWrite:false, side:THREE.DoubleSide}));
+ring.rotation.x = -Math.PI/2; scene.add(ring);
+const blindFan = new THREE.Mesh(new THREE.CircleGeometry(3.2, 24, -BLIND*DEG, 2*BLIND*DEG),
+  new THREE.MeshBasicMaterial({color:0x0c2a3a, transparent:true, opacity:.34, depthWrite:false, side:THREE.DoubleSide}));
+blindFan.rotation.x = -Math.PI/2; const blindHolder = new THREE.Group(); blindHolder.add(blindFan); scene.add(blindHolder);
+
+let flies = [], flyId = 0;
+const GROUND_ST = {idle:1, walk:1, groom:1, feed:1, crouch:1};
+function spotOK(x, z){ return !hitsOb(x, z, .3, .5); }
+function pickSpot(avoid, minD){
+  minD = minD == null ? 4.5 : minD;
+  let best = null, bestD = -1;
+  for (let k=0;k<60;k++){
+    let x, z, fruit = null;
+    if (FRUITS.length && Math.random() < .72){
+      fruit = FRUITS[(Math.random()*FRUITS.length)|0];
+      const a = rand(0, 6.283);
+      x = fruit.x + Math.cos(a)*(fruit.rx+.3); z = fruit.z + Math.sin(a)*(fruit.rz+.3);
+    } else { x = rand(BOUNDS.x0+1, BOUNDS.x1-1); z = rand(BOUNDS.z0+1, BOUNDS.z1-1); }
+    if (!spotOK(x,z)) continue;
+    if (flies.some(f => f.state !== 'gone' && f.p1 && Math.hypot(f.p1.x-x, f.p1.z-z) < .8)) continue;
+    const d = avoid ? Math.hypot(x-avoid.x, z-avoid.z) : 99;
+    if (d > minD) return {x, z, fruit};
+    if (d > bestD){ bestD = d; best = {x, z, fruit}; }
+  }
+  return best || {x:BOUNDS.x1-1.5, z:BOUNDS.z0+1.5, fruit:null};
+}
+function newFly(opts={}){
+  const f = {id:++flyId, mesh:makeFly(), state:'idle', t:0, dur:.5, x:0, y:0, z:0, h:rand(0,6.28),
+    vx:0, vy:0, vz:0, prev:{}, inL:0, inR:0, b:brainLoom(0,0), gf:0, d:99, spVis:'seen', spDrive:0, flap:rand(0,9), turn:0,
+    wanderT:rand(...G.lv.wander), gfPeak:0, fruit:null, p1:null};
+  scene.add(f.mesh);
+  if (opts.at){ f.x = opts.at.x; f.z = opts.at.z; f.y = 0; if (opts.h != null) f.h = opts.h; setState(f, opts.state || 'idle', opts.dur || rand(.5,1.5)); }
+  else {
+    const spot = opts.spot || pickSpot(sp, 5);
+    const edge = Math.random()*4|0;
+    f.x = edge===0 ? BOUNDS.x0-1 : edge===1 ? BOUNDS.x1+1 : rand(BOUNDS.x0, BOUNDS.x1);
+    f.z = edge===2 ? BOUNDS.z0-1 : edge===3 ? BOUNDS.z1+1 : rand(BOUNDS.z0, BOUNDS.z1);
+    f.y = rand(3,5); beginFlight(f, spot);
+  }
+  flies.push(f); drawFly(f, 0); return f;
+}
+function beginFlight(f, spot){
+  f.state = 'fly'; f.ft = 0; f.prev = {};
+  f.p0 = {x:f.x, y:f.y, z:f.z}; f.p1 = {x:spot.x, y:0, z:spot.z}; f.fruit = spot.fruit;
+  const dist = Math.hypot(f.p1.x-f.p0.x, f.p1.y-f.p0.y, f.p1.z-f.p0.z);
+  f.pc = {x:(f.p0.x+f.p1.x)/2 + rand(-2,2), y:Math.max(f.p0.y, 2.6) + rand(1,2.5), z:(f.p0.z+f.p1.z)/2 + rand(-2,2)};
+  f.fdur = dist/5 + .5;
+}
+function setState(f, st, dur){ f.state = st; f.t = 0; f.dur = dur; }
+
+/* 눈별 시야 가중치 (손으로 정한 시야 모델). phi: +왼쪽, elev: 위로 */
+function eyeW(phi, elev){
+  if (elev > 60*DEG) return [1,1];
+  const d = phi/DEG, ramp = x => clamp(.5 + x/8, 0, 1);
+  const wl = ramp(d + OVERLAP) * ramp((180-BLIND) - d);
+  const wr = ramp(-d + OVERLAP) * ramp((180-BLIND) + d);
+  return [wl, wr];
+}
+/* 감각 → 뇌. 거미 + 뛰거나 나는 이웃 파리가 모두 루밍 원천이다 */
+function sense(f, dt){
+  const ex = f.x, ey = f.y + .1, ez = f.z, fw = fwdv(f.h), lv = leftv(f.h);
+  const gain = G.lv.gain * (f.state === 'groom' ? GROOM_GAIN : 1);
+  const srcs = [{key:'sp', x:sp.x, y:sp.y+.3, z:sp.z, r:SP_R}];
+  for (const g of flies) if (g !== f && (g.state === 'jump' || g.state === 'fly') && Math.hypot(g.x-ex, g.z-ez) < 6) srcs.push({key:g.id, x:g.x, y:g.y+.1, z:g.z, r:FLY_R});
+  let dL = 0, dR = 0, spL = 0, spR = 0;
+  const np = {};
+  for (const s of srcs){
+    const dx = s.x-ex, dy = s.y-ey, dz = s.z-ez, d = Math.hypot(dx,dy,dz), hd = Math.hypot(dx,dz);
+    const th = 2*Math.atan(s.r/Math.max(d,.05));
+    const p = f.prev[s.key]; np[s.key] = th;
+    const dth = p == null ? 0 : (th-p)/dt;
+    const phi = Math.atan2(dx*lv[0]+dz*lv[1], dx*fw[0]+dz*fw[1]), elev = Math.atan2(dy, hd);
+    let [wl, wr] = eyeW(phi, elev);
+    const occ = segBlocked(ex,ey,ez, s.x,s.y,s.z) && segBlocked(ex,ey,ez, s.x,s.y+.2,s.z);
+    if (occ){ wl = 0; wr = 0; }
+    const drive = clamp(dth*60*gain, 0, 100);
+    dL += drive*wl; dR += drive*wr;
+    if (s.key === 'sp'){ f.d = d; f.spVis = occ ? 'occl' : (wl+wr < .01 ? 'blind' : 'seen'); f.spDrive = drive; spL = drive*wl; spR = drive*wr; f.phi = phi; }
+  }
+  f.prev = np;
+  dL = Math.min(100, dL); dR = Math.min(100, dR);
+  const a = 1-Math.exp(-dt/0.03);
+  f.inL += (dL - f.inL)*a; f.inR += (dR - f.inR)*a;
+  f.b = brainLoom(f.inL, f.inR);
+  f.gf = (f.b.DNp01_L + f.b.DNp01_R)/2;
+  f.spShare = (spL+spR) / Math.max(1e-6, dL+dR);
+  if (f.gf > f.gfPeak) f.gfPeak = f.gf;
+  return f.gf > GF_TH;
+}
+function triggerEscape(f){
+  const side = f.b.DNp04_L - f.b.DNp04_R;                // >0: 위협이 왼쪽
+  f.latDir = side > 2 ? -1 : side < -2 ? 1 : (Math.random()<.5?-1:1);
+  f.escCause = f.spShare >= .5 ? 'spider' : 'fly';
+  // 위협 원천: 거미가 주원인이면 거미, 아니면 가장 가까운 나는 파리
+  let tx = sp.x, tz = sp.z;
+  if (f.escCause === 'fly'){ let bd = 1e9; for (const g of flies) if (g !== f && (g.state==='jump'||g.state==='fly')){ const d = Math.hypot(g.x-f.x,g.z-f.z); if (d < bd){ bd = d; tx = g.x; tz = g.z; } } }
+  f.threat = {x:tx, z:tz};
+  f.escGF = f.gf; f.escD = Math.hypot(sp.x-f.x, sp.z-f.z); f.escSide = side;
+  setState(f, 'crouch', rand(.04,.11));                    // 점프 준비 (손으로 정한 값)
+  G.events.push({type:'escape', id:f.id, gf:+f.gf.toFixed(1), d:+f.escD.toFixed(2), cause:f.escCause, vis:f.spVis, t:+G.t.toFixed(3)});
+  if (f.escCause === 'spider') G.stats.escapes++; else G.stats.cascade++;
+  if (f === G.target || G.lab) flashT = .9;
+  if (!G.lab){ popText(f.x, .8, f.z, f.escCause === 'spider' ? '거대섬유 발화!' : '연쇄 탈출', 'esc'); sfx.zip(); }
+}
+function doJump(f){
+  const lv = leftv(f.h); let ax = f.x-f.threat.x, az = f.z-f.threat.z; const n = Math.hypot(ax,az);
+  if (n > .05){ ax/=n; az/=n; } else { ax = 0; az = 0; }
+  let hx = ax*.6 + lv[0]*f.latDir*.8, hz = az*.6 + lv[1]*f.latDir*.8; const m = Math.hypot(hx,hz)||1;
+  f.vx = hx/m*5; f.vz = hz/m*5; f.vy = 6; f.h = Math.atan2(f.vx, f.vz);
+  setState(f, 'jump', .3);
+}
+function faceFruit(f){ if (f.fruit) f.h = Math.atan2(f.fruit.x-f.x, f.fruit.z-f.z); }
+
+function updateFly(f, dt){
+  f.t += dt;
+  const st = f.state;
+  if (st === 'eaten'){
+    f.x = sp.x + Math.sin(sp.h)*.42; f.z = sp.z + Math.cos(sp.h)*.42; f.y = sp.y + .12;
+    const k = clamp(1-f.t/.6, 0, 1); f.mesh.scale.setScalar(FLY_S*k);
+    if (f.t > .6){ scene.remove(f.mesh); f.gone = true; }
+    drawFly(f, dt); return;
+  }
+  if (st === 'fly'){
+    f.ft += dt; const u = clamp(f.ft/f.fdur,0,1), a = 1-u, w = Math.sin(f.ft*11)*.25*(1-Math.abs(2*u-1));
+    const px = a*a*f.p0.x + 2*a*u*f.pc.x + u*u*f.p1.x, py = a*a*f.p0.y + 2*a*u*f.pc.y + u*u*f.p1.y, pz = a*a*f.p0.z + 2*a*u*f.pc.z + u*u*f.p1.z;
+    const vx = px-f.x, vz = pz-f.z; if (Math.hypot(vx,vz) > 1e-4) f.h = Math.atan2(vx,vz);
+    f.x = px + w*Math.cos(f.h); f.y = py + Math.sin(f.ft*7)*.1*(1-u); f.z = pz - w*Math.sin(f.h);
+    if (u >= 1){
+      f.x = f.p1.x; f.y = 0; f.z = f.p1.z; f.prev = {}; f.inL = f.inR = 0; f.gfPeak = 0;
+      if (f.fruit){ faceFruit(f); setState(f, 'feed', rand(3,7)); } else setState(f, 'idle', rand(.4,1));
+    }
+    drawFly(f, dt); return;
+  }
+  if (st === 'jump'){
+    f.x += f.vx*dt; f.y += f.vy*dt; f.z += f.vz*dt; f.vy -= 6*dt;
+    if (f.t >= f.dur) beginFlight(f, pickSpot(sp, 5));
+    drawFly(f, dt); return;
+  }
+  if (st === 'crouch'){ if (f.t >= f.dur) doJump(f); drawFly(f, dt); return; }
+  // 땅 위 상태: idle / walk / groom / feed → 매 프레임 뇌가 판단
+  if (sense(f, dt)){ triggerEscape(f); drawFly(f, dt); return; }
+  if (!G.lab || G.labWander) f.wanderT -= dt;
+  if (st === 'walk'){
+    if (LIGHT){
+      // 햇빛 → 눈별 Tm3 입력 → DNp07+DNb05 좌우차로 방향 틀기
+      const dx = LIGHT.x-f.x, dz = LIGHT.z-f.z, dist = Math.hypot(dx,dz), fw = fwdv(f.h), lv = leftv(f.h);
+      const phi = Math.atan2(dx*lv[0]+dz*lv[1], dx*fw[0]+dz*fw[1]), [wl, wr] = eyeW(phi, 0);
+      const I = 100*clamp(1.15 - dist/12, 0, 1);
+      const lb = brainLight(I*wl, I*wr); f.light = lb;
+      const diff = (lb.DNp07_L + lb.DNb05_L) - (lb.DNp07_R + lb.DNb05_R);
+      f.h += clamp(diff/100, -1.5, 1.5)*LIGHT_TURN*dt;
+      if (dist < 1.4){ setState(f, Math.random()<.5 ? 'groom' : 'idle', rand(2,4)); }
+    }
+    f.turn += rand(-1,1)*dt*6; f.turn = clamp(f.turn, -1.6, 1.6); f.h += f.turn*dt*(LIGHT ? .5 : 1);
+    const v = 0.55, nx = f.x + Math.sin(f.h)*v*dt, nz = f.z + Math.cos(f.h)*v*dt;
+    if (hitsOb(nx, nz, .2, .5)){ f.h += Math.PI*rand(.6,1.4); f.turn = 0; }
+    else { f.x = nx; f.z = nz; }
+  }
+  if (f.t >= f.dur){
+    if (f.wanderT <= 0){ f.wanderT = rand(...G.lv.wander); beginFlight(f, pickSpot(sp, 4.5)); if (!G.lab) sfx.buzzKick(); }
+    else {
+      const nearFruit = FRUITS.find(q => Math.hypot(q.x-f.x, q.z-f.z) < Math.max(q.rx,q.rz)+.8);
+      const gp = G.lv.groom || .3, r = Math.random();
+      if (nearFruit && r < .5){ f.fruit = nearFruit; faceFruit(f); setState(f, 'feed', rand(3,7)); }
+      else if (r < .5 + gp*.5) setState(f, 'groom', rand(1.5,3.5));
+      else if (r < .9) { setState(f, 'walk', rand(1,2.5)); f.fruit = null; }
+      else setState(f, 'idle', rand(.5,1.5));
+      f.turn = 0;
+    }
+  }
+  drawFly(f, dt);
+}
+function drawFly(f, dt){
+  f.mesh.position.set(f.x, f.y, f.z); f.mesh.rotation.y = f.h;
+  const u = f.mesh.userData; f.flap += dt;
+  if (f.state === 'fly' || f.state === 'jump'){ const s = Math.sin(f.flap*70)*.9; u.wl.rotation.z = s; u.wr.rotation.z = -s; f.mesh.rotation.x = -.15; }
+  else {
+    f.mesh.rotation.x = f.state === 'crouch' ? .25 : f.state === 'feed' ? .18 : 0;
+    const up = f.state === 'crouch' ? .7 : .15; u.wl.rotation.z = up; u.wr.rotation.z = -up;
+    for (let i=0;i<6;i++){
+      const leg = u.legs[i];
+      if (f.state === 'walk') leg.rotation.x = Math.sin(f.flap*18 + i*2.1)*.5;
+      else if (f.state === 'groom' && (i===0||i===3)) leg.rotation.x = -1.1 + Math.sin(f.flap*14)*.35;
+      else if (f.state === 'groom' && (i===2||i===5)) leg.rotation.x = .9 + Math.sin(f.flap*12)*.3;
+      else leg.rotation.x = 0;
+    }
+  }
+}
+
+/* ================= 거미 갱신 ================= */
+function moveInput(){
+  if (inp.bot) return inp.bot;
+  let x = inp.kx + inp.jx, z = inp.kz + inp.jz; const m = Math.hypot(x,z);
+  if (m > 1){ x /= m; z /= m; }
+  return {x, z, sneak: inp.sneakHold || inp.sneakToggle};
+}
+function grounded(f){ return GROUND_ST[f.state] || (f.state === 'jump' && f.y < .2); }
+function startPounce(){
+  if (sp.mode !== 'walk' || sp.cd > 0 || sp.lock > 0) return false;
+  let tg = null, bd = POUNCE_R;
+  for (const f of flies){ if (!GROUND_ST[f.state]) continue; const d = Math.hypot(f.x-sp.x, f.z-sp.z); if (d <= bd){ bd = d; tg = f; } }
+  let tx, tz;
+  if (tg){ tx = tg.x; tz = tg.z; sp.h = Math.atan2(tx-sp.x, tz-sp.z); }
+  else { tx = sp.x + Math.sin(sp.h)*1.0; tz = sp.z + Math.cos(sp.h)*1.0; }
+  // 경로를 따라가다 막히는 곳 직전에서 멈춘다 (착지점도 걷기 충돌 반경으로 검사 — 끼임 방지)
+  const ox = sp.x, oz = sp.z; let fx = ox, fz = oz;
+  for (let u=.05; u<=1.0001; u+=.05){ const qx = ox + (tx-ox)*u, qz = oz + (tz-oz)*u; if (hitsOb(qx, qz, SP_COL)) break; fx = qx; fz = qz; }
+  tx = fx; tz = fz;
+  const dist = Math.hypot(tx-sp.x, tz-sp.z);
+  sp.mode = 'pounce'; sp.pt = 0; sp.p0 = {x:sp.x, z:sp.z}; sp.p1 = {x:tx, z:tz}; sp.pdur = Math.max(.08, dist/POUNCE_V);
+  sp.tgt = tg; sp.ambush = !!tg && (tg.spVis === 'blind' || tg.spVis === 'occl'); sp.caught = 0;
+  G.stats.pounces++;
+  G.events.push({type:'pounce', d:+dist.toFixed(2), target:tg ? tg.id : null, vis:tg ? tg.spVis : null, t:+G.t.toFixed(3)});
+  if (!G.lab) sfx.whoosh();
+  return true;
+}
+function updateSpider(dt){
+  sp.cd = Math.max(0, sp.cd - dt); sp.lock = Math.max(0, sp.lock - dt);
+  if (inp.pounce){ inp.pounce = false; if (G.canAct()) startPounce(); }
+  if (sp.mode === 'pounce'){
+    sp.pt += dt; const u = clamp(sp.pt/sp.pdur, 0, 1);
+    const px = sp.x, pz = sp.z;
+    sp.x = sp.p0.x + (sp.p1.x-sp.p0.x)*u; sp.z = sp.p0.z + (sp.p1.z-sp.p0.z)*u; sp.y = .35*4*u*(1-u);
+    sp.vx = (sp.x-px)/dt; sp.vz = (sp.z-pz)/dt;
+    for (const f of flies){
+      if (!grounded(f)) continue;
+      if (Math.hypot(f.x-sp.x, f.z-sp.z) < CATCH_R) catchFly(f);
+    }
+    if (u >= 1){ sp.mode = 'walk'; sp.y = 0; sp.vx = sp.vz = 0; sp.cd = POUNCE_CD; sp.lock = .25;
+      G.events.push({type:'land', caught:sp.caught, t:+G.t.toFixed(3)});
+      if (!sp.caught && !G.lab) popText(sp.x, .9, sp.z, '헛방', 'esc'); }
+    return;
+  }
+  const mi = G.canAct() && sp.lock <= 0 ? moveInput() : {x:0, z:0, sneak:false};
+  sp.sneak = mi.sneak;
+  const vmax = mi.sneak ? SNEAK_V : WALK_V;
+  const tvx = mi.x*vmax, tvz = mi.z*vmax;
+  let ax = tvx-sp.vx, az = tvz-sp.vz; const am = Math.hypot(ax,az), cap = ACC*dt;
+  if (am > cap){ ax *= cap/am; az *= cap/am; }
+  sp.vx += ax; sp.vz += az;
+  const nx = sp.x + sp.vx*dt, nz = sp.z + sp.vz*dt;
+  const inside = hitsOb(sp.x, sp.z, SP_COL);            // 이미 겹쳐 있으면 빠져나가는 움직임은 허용
+  const ok = (x, z) => !hitsOb(x, z, SP_COL) || (inside && !hitsOb(x, z, SP_COL*.5));
+  if (ok(nx, sp.z)) sp.x = nx; else sp.vx = 0;
+  if (ok(sp.x, nz)) sp.z = nz; else sp.vz = 0;
+  const spd = Math.hypot(sp.vx, sp.vz);
+  if (spd > .05){ const want = Math.atan2(sp.vx, sp.vz); sp.h += wrapA(want-sp.h)*Math.min(1, dt*12); }
+  sp.gait += spd*dt*7;
+}
+function catchFly(f){
+  setState(f, 'eaten', 0); f.prev = {};
+  sp.caught++;
+  if (G.lab){ G.events.push({type:'catch', id:f.id, t:+G.t.toFixed(3)}); return; }
+  G.kills++;
+  let gained = 100, tags = [];
+  if (sp.tgt === f && sp.ambush){ gained += 50; tags.push('사각지대 기습 +50'); G.stats.ambush++; }
+  if (f.gfPeak < GF_TH/2){ gained += 30; tags.push('완벽한 은신 +30'); }
+  G.score += gained; G.levelScore += gained; G.shake = .25;
+  G.events.push({type:'catch', id:f.id, gained, t:+G.t.toFixed(3)});
+  popText(f.x, 1, f.z, '+' + gained, '');
+  tags.forEach((s,i) => setTimeout(() => popText(f.x, 1.7 + i*.55, f.z, s, 'bonus'), 120 + i*150));
+  sfx.chomp();
+}
+
+/* ================= 효과 ================= */
+const pops = [];
+function popText(x,y,z,txt,cls){
+  const el = document.createElement('div'); el.className = 'pop ' + (cls||''); el.textContent = txt; $('fx').appendChild(el);
+  pops.push({el, p:new THREE.Vector3(x,y,z), t:0});
+}
+function agePops(dt){ for (let i=pops.length-1;i>=0;i--){ const o = pops[i]; o.t += dt; if (o.t > 1.1){ o.el.remove(); pops.splice(i,1); } } }
+function updatePops(){
+  const v = new THREE.Vector3(), W = view.clientWidth, H = view.clientHeight;
+  for (const o of pops){
+    v.copy(o.p); v.y += o.t*1.1; v.project(camera);
+    o.el.style.left = clamp((v.x+1)/2*W, 60, W-60) + 'px'; o.el.style.top = ((1-v.y)/2*H) + 'px'; o.el.style.opacity = clamp(1.7-o.t*1.6,0,1);
+  }
+}
+let flashT = 0;
+
+/* ================= 소리 (첫 입력 뒤에만) ================= */
+const sfx = (() => {
+  let ctx = null, master = null, buzzG = null, osc = null, noiseBuf = null, muted = false;
+  try { muted = localStorage.getItem('spider-stalk.mute') === '1'; } catch(e){}
+  function init(){
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    try {
+      ctx = new AC(); master = ctx.createGain(); master.gain.value = muted ? 0 : .7; master.connect(ctx.destination);
+      osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 200;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 23; const lg = ctx.createGain(); lg.gain.value = 14; lfo.connect(lg); lg.connect(osc.frequency);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 540; bp.Q.value = .9;
+      buzzG = ctx.createGain(); buzzG.gain.value = 0; osc.connect(bp); bp.connect(buzzG); buzzG.connect(master); osc.start(); lfo.start();
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate*.3, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+    } catch(e){ ctx = null; }
+  }
+  function noise(dur, freq, vol){
+    if (!ctx) return; const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq; const g = ctx.createGain();
+    const t = ctx.currentTime; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t+dur+.02);
+  }
+  function tone(f0, f1, dur, vol, type){
+    if (!ctx) return; const o = ctx.createOscillator(); o.type = type||'sine'; const g = ctx.createGain(), t = ctx.currentTime;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur); o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.02);
+  }
+  let kick = 0;
+  return {
+    init,
+    get muted(){ return muted; },
+    setMuted(m){ muted = m; try { localStorage.setItem('spider-stalk.mute', m?'1':'0'); } catch(e){} if (master) master.gain.value = m ? 0 : .7; },
+    buzz(nFlying, dt){
+      if (!ctx) return; kick = Math.max(0, kick - dt);
+      const target = Math.min(.12, nFlying*.045) + kick*.06;
+      buzzG.gain.value += (target - buzzG.gain.value)*Math.min(1, dt*8);
+      osc.frequency.value = 190 + Math.sin(performance.now()/170)*12 + nFlying*6;
+    },
+    buzzKick(){ kick = 1; },
+    whoosh(){ noise(.1, 2600, .2); },
+    chomp(){ noise(.08, 900, .5); setTimeout(() => noise(.08, 700, .4), 90); tone(300, 600, .12, .15, 'triangle'); },
+    zip(){ tone(420, 980, .14, .1, 'sawtooth'); kick = 1; },
+    win(){ [523,659,784].forEach((f,i) => setTimeout(() => tone(f, f*1.01, .22, .15, 'triangle'), i*110)); },
+  };
+})();
+
+/* ================= 게임 상태 · 저장 ================= */
+const G = {
+  phase:'menu', lab:false, labWander:false, lv:LEVELS[0], level:1, score:0, levelScore:0, time:90, kills:0, killsAtStart:0,
+  shake:0, t:0, spawnT:0, bannerT:0, target:null, events:[], stats:{escapes:0, cascade:0, ambush:0, pounces:0}, runStart:1,
+  canAct(){ return this.phase === 'play' || this.lab; }
+};
+const SAVE_KEY = 'spider-stalk.v1';
+let save = {best:0, stars:[0,0,0,0,0,0,0,0]};
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && Array.isArray(s.stars)) save = Object.assign(save, s); } catch(e){}
+function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} }
+const unlocked = n => n === 1 || save.stars[n-2] > 0;
+
+$('metaLine').textContent = `뇌: FlyWire 커넥톰(${T.meta.connectome}) 뉴런 ${T.meta.neurons.toLocaleString()}개 · 연결 ${T.meta.synapse_rows.toLocaleString()}쌍 전체를 ${T.meta.model} 모델로 ${T.meta.sim_ms}ms씩 미리 시뮬레이션한 반응표(눈별 입력 0·15·30·50·75·100Hz 조합 36개)를 실시간 보간합니다.`;
+$('measLine').innerHTML = '<b>실험실 측정:</b> 원래 실험실에서 빠른 물체는 약 3.1블록, 느린 물체는 약 1.5블록에서야 탈출을 일으켰습니다. 이 게임의 거미(r=0.4)로는 경계심 ×1.0에서 정면으로 걸어오면(2.6블록/초) 약 2.0블록, 살금살금(0.7블록/초)이면 약 1.0블록에서 거대섬유가 문턱을 넘습니다. 옆에서 오면 한쪽 눈만 보므로 더 가까이 가야 켜지고, 사각지대에서는 입력이 0입니다.';
+
+function renderLevelGrid(){
+  const g = $('lvGrid'); g.innerHTML = '';
+  LEVELS.forEach((lv, i) => {
+    const n = i+1, b = document.createElement('button'), s = save.stars[i] || 0;
+    b.innerHTML = `<b>${n}</b>${lv.name}<div class="st">${'★'.repeat(s)}${'☆'.repeat(3-s)}</div>`;
+    b.disabled = !unlocked(n); b.onclick = () => startRun(n);
+    b.setAttribute('aria-label', `${n}구역 ${lv.name}, 별 ${s}개`);
+    g.appendChild(b);
+  });
+  $('bestTxt').textContent = save.best.toLocaleString();
+}
+function clearFlies(){ for (const f of flies) scene.remove(f.mesh); flies = []; G.target = null; }
+function banner(t, p, dur){ $('bnT').textContent = t; $('bnP').textContent = p; $('banner').classList.add('on'); G.bannerT = dur; }
+function placeSpider(x, z){ sp.x = x; sp.z = z; sp.y = 0; sp.h = Math.PI; sp.vx = sp.vz = 0; sp.mode = 'walk'; sp.cd = 0; sp.lock = 0; }
+function startRun(n){
+  sfx.init(); G.score = 0; G.runStart = n;
+  $('startOv').hidden = true; $('endOv').hidden = true;
+  startLevel(n);
+}
+function startLevel(n){
+  clearFlies(); G.lab = false;
+  $('startOv').hidden = true; $('endOv').hidden = true; $('pauseOv').hidden = true;
+  G.level = n; G.lv = LEVELS[n-1]; buildWorld(G.lv);
+  G.killsAtStart = G.kills = 0; G.levelScore = 0; G.time = G.lv.time; G.spawnT = 0; G.events = [];
+  G.stats = {escapes:0, cascade:0, ambush:0, pounces:0};
+  placeSpider(...G.lv.start);
+  // 처음 파리들은 이미 앉아 있다
+  for (let i=0;i<G.lv.flies;i++){
+    const s = pickSpot(sp, 5);
+    const f = newFly({at:s, state: s.fruit ? 'feed' : 'idle', dur: rand(2,6)});
+    f.fruit = s.fruit; f.p1 = {x:s.x, z:s.z}; if (s.fruit) faceFruit(f);
+  }
+  G.phase = 'intro'; $('app').classList.add('playing');
+  banner(`${n}구역 · ${G.lv.name}`, G.lv.tip, 3);
+  inp.kx = inp.kz = inp.jx = inp.jz = 0; inp.pounce = false;
+  snapCamera();
+}
+function starsFor(){
+  const s1 = 1, s2 = G.stats.escapes <= 2 ? 1 : 0, s3 = G.time >= G.lv.time*.4 ? 1 : 0;
+  return [s1, s2, s3];
+}
+function finishLevel(won){
+  G.phase = won ? 'clear' : 'over'; $('app').classList.remove('playing');
+  inp.kx = inp.kz = inp.jx = inp.jz = 0;
+  let st = [0,0,0];
+  if (won){
+    const bonus = Math.ceil(G.time)*5; G.score += bonus; G.levelScore += bonus;
+    st = starsFor(); const n = st.reduce((a,b)=>a+b,0);
+    save.stars[G.level-1] = Math.max(save.stars[G.level-1]||0, n);
+    sfx.win();
+  }
+  const nb = G.score > save.best; if (nb) save.best = G.score;
+  persist();
+  const last = G.level >= LEVELS.length;
+  $('ovTitle').textContent = won ? (last ? '정원 정복!' : `${G.level}구역 클리어!`) : '시간 종료';
+  $('ovStars').innerHTML = st.map(x => `<span class="${x?'on':''}">★</span>`).join('');
+  $('ovStars').style.display = won ? '' : 'none';
+  $('ovWhy').textContent = won ? `★ 클리어 · ${st[1]?'★':'☆'} 들킴 2번 이하 (${G.stats.escapes}번) · ${st[2]?'★':'☆'} 시간 40% 이상 남김` : '';
+  $('ovLead').textContent = won
+    ? (last ? '여덟 구역을 모두 사냥했습니다. 사각지대와 엄폐물, 느린 접근 — 파리 뇌가 정말로 놓치는 것들입니다.' : `남은 시간 보너스 +${Math.ceil(G.time)*5}.` + (nb ? ' 새 최고 점수!' : ''))
+    : `${G.level}구역에서 시간이 다 됐습니다. 정면으로 빨리 다가가면 2블록 밖에서도 거대섬유가 깨어납니다.`;
+  $('rScore').textContent = G.score.toLocaleString(); $('rKills').textContent = G.kills; $('rEsc').textContent = G.stats.escapes;
+  $('rCas').textContent = G.stats.cascade; $('rAmb').textContent = G.stats.ambush; $('rBest').textContent = save.best.toLocaleString();
+  $('nextBtn').hidden = !won || last;
+  $('endOv').hidden = false;
+  renderLevelGrid();
+}
+function toMenu(){
+  G.phase = 'menu'; $('endOv').hidden = true; $('pauseOv').hidden = true; paused = false; $('app').classList.remove('playing'); $('startOv').hidden = false; $('banner').classList.remove('on');
+  renderLevelGrid(); menuScene();
+}
+function menuScene(){
+  G.lv = LEVELS[1]; G.level = 1; buildWorld(LEVELS[1]); clearFlies(); placeSpider(-4, 3);
+  for (let i=0;i<3;i++){ const s = pickSpot(sp, 3); const f = newFly({at:s, state:s.fruit?'feed':'idle', dur:rand(2,5)}); f.fruit = s.fruit; if (s.fruit) faceFruit(f); }
+  snapCamera();
+}
+
+function stepGame(dt){
+  if (G.bannerT > 0){ G.bannerT -= dt; if (G.bannerT <= 0) $('banner').classList.remove('on'); }
+  if (G.phase === 'intro' && G.bannerT <= 1.8) G.phase = 'play';
+  if (G.phase !== 'play') return;
+  const alive = flies.filter(f => f.state !== 'eaten').length;
+  G.spawnT -= dt;
+  if (alive < G.lv.flies && G.spawnT <= 0 && G.kills < G.lv.quota){ newFly(); G.spawnT = 2; }
+  G.time -= dt;
+  if (G.kills >= G.lv.quota){ finishLevel(true); }
+  else if (G.time <= 0){ G.time = 0; finishLevel(false); }
+}
+
+/* ================= 한 스텝 (렌더와 분리 · 헤드리스 가능) ================= */
+function step(dt){
+  G.t += dt;
+  if (G.script) G.script(dt);
+  updateSpider(dt);
+  for (const f of flies) updateFly(f, dt);
+  if (flies.some(f => f.gone)) flies = flies.filter(f => !f.gone);
+  let tg = null, bd = 1e9;
+  for (const f of flies){ if (!GROUND_ST[f.state] && f.state !== 'jump') continue; const d = Math.hypot(f.x-sp.x, f.z-sp.z); if (d < bd){ bd = d; tg = f; } }
+  if (!(G.target && (G.target.state === 'crouch' || G.target.state === 'jump') && flies.includes(G.target))) G.target = tg;
+  stepGame(dt);
+  agePops(dt);
+  G.shake = Math.max(0, G.shake - dt*1.6);
+  if (!G.lab && G.events.length > 200) G.events.splice(0, 100);
+  sfx.buzz(flies.filter(f => f.state === 'fly' || f.state === 'jump').length, dt);
+}
+
+/* ================= 그리기 ================= */
+const CAM = {pos:new THREE.Vector3(), look:new THREE.Vector3(), off:new THREE.Vector3(0, 8.5, 6.2)};
+function fitCamera(){
+  const W = view.clientWidth || 1, H = view.clientHeight || 1, a = W/H;
+  renderer.setSize(W, H, false); camera.aspect = a;
+  if (a < .8){ camera.fov = 58; CAM.off.set(0, 11.5, 6.8); } else { camera.fov = 48; CAM.off.set(0, 10, 7.4); }
+  camera.updateProjectionMatrix();
+}
+function camTarget(){
+  const lx = clamp(sp.x, BOUNDS.x0+2, BOUNDS.x1-2), lz = clamp(sp.z, BOUNDS.z0+1, BOUNDS.z1-2.2);
+  return [lx, lz];
+}
+function snapCamera(){ const [lx,lz] = camTarget(); CAM.look.set(lx, 0, lz-.5); CAM.pos.copy(CAM.look).add(CAM.off); }
+window.addEventListener('resize', () => { fitCamera(); snapCamera(); });
+const _gfI = $('bGF'), _ui = {};
+$('bTh').style.left = (GF_TH/160*100) + '%';
+const VIS_TXT = {seen:'<b>보임</b>', blind:'<b>사각지대</b> — 안 보임', occl:'<b>가려짐</b> — 안 보임'};
+const ST_TXT = {idle:'가만히', walk:'걷는 중', groom:'털 고르는 중(둔함)', feed:'먹는 중', crouch:'점프 준비!', jump:'탈출 점프!'};
+function render(dt){
+  const [lx, lz] = camTarget(), k = 1-Math.exp(-dt*6);
+  CAM.look.x += (lx-CAM.look.x)*k; CAM.look.z += ((lz-.5)-CAM.look.z)*k;
+  CAM.pos.copy(CAM.look).add(CAM.off);
+  camera.position.copy(CAM.pos);
+  if (G.shake > 0){ const s = G.shake*G.shake*.8; camera.position.x += rand(-s,s); camera.position.y += rand(-s,s); }
+  camera.lookAt(CAM.look);
+  // 거미
+  spider.position.set(sp.x, sp.y, sp.z); spider.rotation.y = sp.h;
+  const crouch = sp.sneak && sp.mode === 'walk' ? .82 : 1;
+  spider.scale.set(1.12, 1.12*crouch, 1.12);
+  spider.rotation.x = sp.mode === 'pounce' ? -.25 : 0;
+  for (const L of spLegs){
+    const ph = sp.gait + L.i*1.6 + (L.sx > 0 ? Math.PI : 0);
+    L.hip.rotation.y = L.base + (sp.mode === 'pounce' ? L.sx*(L.i<2?-.3:.3) : Math.sin(ph)*.25);
+    L.hip.position.y = .28 + Math.max(0, Math.cos(ph))*.04;
+  }
+  spShadow.position.set(sp.x, .015, sp.z); spShadow.material.opacity = .3 - sp.y*.25;
+  rangeRing.position.set(sp.x, .02, sp.z);
+  const tg = G.target, inRange = tg && GROUND_ST[tg.state] && Math.hypot(tg.x-sp.x, tg.z-sp.z) <= POUNCE_R;
+  rangeRing.material.opacity = sp.cd > 0 ? .08 : inRange ? .7 : .22;
+  rangeRing.material.color.setHex(inRange ? 0xffd34d : 0xffffff);
+  rangeRing.visible = G.phase !== 'menu';
+  const danger = tg ? clamp(tg.gf/GF_TH, 0, 1.4) : 0;
+  if (tg && G.phase !== 'menu' && GROUND_ST[tg.state]){
+    ring.visible = true; ring.position.set(tg.x, .025, tg.z); ring.material.color.setRGB(.48+danger*.5, clamp(.85-danger*.6,0,1), .45);
+    blindHolder.visible = true; blindHolder.position.set(tg.x, .018, tg.z);
+    blindHolder.rotation.y = tg.h + Math.PI/2;  // 원 조각 중심(+x)을 파리 뒤쪽 -(sin h, cos h)로
+    blindFan.material.opacity = tg.spVis === 'blind' ? .5 : .3;
+  } else { ring.visible = false; blindHolder.visible = false; }
+  if (lightMesh) lightMesh.material.opacity = .4 + Math.sin(performance.now()/600)*.06;
+  updatePops();
+  renderer.render(scene, camera);
+  // HUD
+  setTxt('lvTxt', G.level); setTxt('scTxt', G.score.toLocaleString()); setTxt('tmTxt', Math.ceil(G.time));
+  setTxt('qTxt', `${Math.min(G.kills, G.lv.quota)}/${G.lv.quota}`);
+  $('time').classList.toggle('low', G.phase === 'play' && G.time < 15);
+  setTxt('bgain', `경계심 ×${G.lv.gain.toFixed(2).replace(/0$/,'')}`);
+  const live = tg && GROUND_ST[tg.state];
+  const b = live ? tg.b : brainLoom(0,0), inL = live ? tg.inL : 0, inR = live ? tg.inR : 0, gf = live ? tg.gf : 0;
+  setW('bInL', inL/100); setW('bInR', inR/100); setW('bGF', gf/160); setW('bP4L', b.DNp04_L/250); setW('bP4R', b.DNp04_R/250);
+  _gfI.style.background = gf > GF_TH ? 'var(--warn)' : gf > GF_TH*.7 ? 'var(--accent)' : 'var(--good)';
+  setTxt('bGFv', Math.round(gf) + ' Hz');
+  let st = '근처에 앉은 파리가 없습니다';
+  if (tg){
+    st = GROUND_ST[tg.state] ? `${ST_TXT[tg.state]} · ${Math.hypot(tg.x-sp.x, tg.z-sp.z).toFixed(1)}블록 · ${VIS_TXT[tg.spVis]}` : ST_TXT[tg.state] || '';
+    if (sp.cd > 0) st += ' · 도약 충전 중';
+  }
+  setHTML('bstate', st);
+  flashT = Math.max(0, flashT - dt); $('gfFlash').classList.toggle('on', flashT > 0);
+  $('pounceBtn').classList.toggle('cd', sp.cd > 0 || sp.mode === 'pounce');
+}
+function setTxt(id, v){ v = String(v); if (_ui[id] !== v){ _ui[id] = v; $(id).textContent = v; } }
+function setHTML(id, v){ if (_ui[id] !== v){ _ui[id] = v; $(id).innerHTML = v; } }
+function setW(id, f){ const v = (clamp(f,0,1)*100).toFixed(1) + '%'; if (_ui['w'+id] !== v){ _ui['w'+id] = v; $(id).style.width = v; } }
+
+/* ================= 입력 ================= */
+const keys = new Set();
+function syncKeys(){
+  inp.kx = (keys.has('KeyD')||keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA')||keys.has('ArrowLeft') ? 1 : 0);
+  inp.kz = (keys.has('KeyS')||keys.has('ArrowDown') ? 1 : 0) - (keys.has('KeyW')||keys.has('ArrowUp') ? 1 : 0);
+  const m = Math.hypot(inp.kx, inp.kz); if (m > 1){ inp.kx /= m; inp.kz /= m; }
+  inp.sneakHold = keys.has('ShiftLeft') || keys.has('ShiftRight');
+}
+const MOVE_KEYS = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'];
+window.addEventListener('keydown', e => {
+  if (MOVE_KEYS.includes(e.code)){ keys.add(e.code); syncKeys(); if (G.phase !== 'menu') e.preventDefault(); sfx.init(); }
+  else if ((e.code === 'Space' || e.code === 'KeyJ') && !e.repeat && G.canAct()){ inp.pounce = true; sfx.init(); e.preventDefault(); }
+  else if (e.code === 'KeyC' && !e.repeat){ inp.sneakToggle = !inp.sneakToggle; syncSneak(); }
+});
+window.addEventListener('keyup', e => { if (keys.delete(e.code)) syncKeys(); });
+window.addEventListener('blur', () => { keys.clear(); syncKeys(); });
+// 터치
+if ((window.matchMedia && matchMedia('(pointer:coarse)').matches) || 'ontouchstart' in window) $('app').classList.add('touch');
+window.addEventListener('touchstart', () => $('app').classList.add('touch'), {once:true, passive:true});
+const joy = $('joy'), knob = $('knob'); let joyId = null;
+function joyMove(e){
+  const r = joy.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2, R = r.width/2;
+  let dx = (e.clientX-cx)/R, dy = (e.clientY-cy)/R; const m = Math.hypot(dx,dy); if (m > 1){ dx /= m; dy /= m; }
+  // 조금만 밀면 느리게: 크기를 그대로 속도에 쓴다
+  inp.jx = dx; inp.jz = dy; knob.style.transform = `translate(${dx*R*.6}px,${dy*R*.6}px)`;
+}
+joy.addEventListener('pointerdown', e => { sfx.init(); joyId = e.pointerId; try { joy.setPointerCapture(e.pointerId); } catch(_){} joyMove(e); e.preventDefault(); });
+joy.addEventListener('pointermove', e => { if (e.pointerId === joyId) joyMove(e); });
+function joyEnd(e){ if (e.pointerId !== joyId) return; joyId = null; inp.jx = inp.jz = 0; knob.style.transform = ''; }
+joy.addEventListener('pointerup', joyEnd); joy.addEventListener('pointercancel', joyEnd);
+$('pounceBtn').addEventListener('pointerdown', e => { sfx.init(); if (G.canAct()) inp.pounce = true; e.preventDefault(); });
+$('sneakBtn').addEventListener('pointerdown', e => { inp.sneakToggle = !inp.sneakToggle; syncSneak(); e.preventDefault(); });
+function syncSneak(){ $('sneakBtn').classList.toggle('on', inp.sneakToggle); $('sneakBtn').textContent = inp.sneakToggle ? '살금 켬' : '살금 끔'; }
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+$('startBtn').onclick = () => startRun(1);
+$('nextBtn').onclick = () => { $('endOv').hidden = true; startLevel(G.level+1); };
+function restartLevel(){ G.score -= G.levelScore; startLevel(G.level); }
+$('retryBtn').onclick = () => { $('endOv').hidden = true; restartLevel(); };
+$('menuBtn').onclick = toMenu;
+function setPause(on){
+  if (on && !(G.phase === 'play' || G.phase === 'intro')) return;
+  paused = on; keys.clear(); syncKeys(); inp.jx = inp.jz = 0; inp.pounce = false; knob.style.transform = '';
+  $('pauseOv').hidden = !on;
+}
+$('pauseBtn').onclick = () => setPause(true);
+$('resumeBtn').onclick = () => setPause(false);
+$('restartBtn').onclick = () => { setPause(false); restartLevel(); };
+$('quitBtn').onclick = () => { setPause(false); toMenu(); };
+window.addEventListener('keydown', e => { if (e.code === 'Escape' || e.code === 'KeyP'){ if (!$('pauseOv').hidden) setPause(false); else setPause(true); } });
+function syncMute(){ $('muteBtn').textContent = sfx.muted ? '소리 끔' : '소리 켬'; }
+$('muteBtn').onclick = () => { sfx.init(); sfx.setMuted(!sfx.muted); syncMute(); }; syncMute();
+
+/* ================= 루프 ================= */
+let last = performance.now(), paused = false;
+function frame(now){
+  const dt = Math.min(.05, Math.max(0, (now-last)/1000)); last = now;
+  if (!paused) step(dt);
+  render(dt);
+  requestAnimationFrame(frame);
+}
+
+/* ================= 디버그 훅 · 헤드리스 실험 ================= */
+function runTrial(opts){
+  // 격리 실험: 장애물 없는 빈 마당에 파리 1마리(먹는 중, 고정)를 두고 거미가 정해진 방향·속도로 다가가 POUNCE 거리에서 도약한다.
+  const o = Object.assign({approach:'front', speed:'slow', start:5, pounceAt:1.2, gain:1, state:'feed', jitter:10, dt:1/60, maxT:20, occluder:false}, opts||{});
+  const wasPaused = paused; paused = true;
+  const keep = {phase:G.phase, lv:G.lv, flies, target:G.target, sp:Object.assign({}, sp), OBST, FRUITS, BOUNDS, LIGHT, events:G.events, stats:G.stats};
+  flies = []; G.lab = true; G.labWander = false; G.lv = Object.assign({}, LEVELS[0], {gain:o.gain}); G.events = []; G.stats = {escapes:0, cascade:0, ambush:0, pounces:0};
+  OBST = []; FRUITS = []; BOUNDS = {x0:-40, x1:40, z0:-40, z1:40}; LIGHT = null;
+  const h = rand(0, 6.283);
+  const f = newFly({at:{x:0, z:0}, h, state:o.state, dur:1e9});
+  f.wanderT = 1e9;
+  const base = {front:0, behind:180, side:90, oblique:45}[o.approach];
+  const ang = h + (base + rand(-o.jitter, o.jitter))*DEG * (Math.random()<.5 ? 1 : -1) * (o.approach === 'front' || o.approach === 'behind' ? 1 : 1);
+  const ux = Math.sin(ang), uz = Math.cos(ang);
+  placeSpider(ux*o.start, uz*o.start);
+  if (o.occluder){ // 파리와 거미 사이 잎 한 장 (거미는 그 뒤에서 걸어 나온다)
+    const mx = ux*2.2, mz = uz*2.2, px = -uz, pz = ux;
+    for (let k=-3;k<=3;k++){ const cx = mx + px*k*.3, cz = mz + pz*k*.3; addOb(cx-.15, cx+.15, cz-.15, cz+.15, 0, 1.6); }
+  }
+  inp.pounce = false;
+  let t = 0, res = null, pounced = false;
+  const path = [];
+  while (t < o.maxT){
+    const d = Math.hypot(f.x-sp.x, f.z-sp.z);
+    let mx = (f.x-sp.x)/(d||1), mz = (f.z-sp.z)/(d||1);
+    if (o.occluder && d > 1.4){ // 잎을 돌아서 가기: 잎 끝 쪽으로 비켜 걷기
+      const px = -uz, pz = ux, side = (sp.x*px + sp.z*pz);
+      if (Math.hypot(sp.x, sp.z) > 2.0 && Math.abs(side) < 1.4){ mx = px*(side>=0?1:-1)*.8 + mx*.6; mz = pz*(side>=0?1:-1)*.8 + mz*.6; const m = Math.hypot(mx,mz); mx/=m; mz/=m; }
+    }
+    const slow = o.speed === 'slow' || (o.speed === 'cover' && d < 2.8);
+    inp.bot = GROUND_ST[f.state] ? {x:mx, z:mz, sneak:slow} : {x:0, z:0, sneak:false};
+    if (!pounced && sp.mode === 'walk' && d <= o.pounceAt && GROUND_ST[f.state]){ inp.pounce = true; pounced = true; }
+    step(o.dt); t += o.dt;
+    const esc = G.events.find(e => e.type === 'escape'), cat = G.events.find(e => e.type === 'catch');
+    if (cat){ res = {caught:true, escaped:!!esc, escD: esc ? esc.d : null, t:+t.toFixed(2)}; break; }
+    if (esc && (!pounced || sp.mode === 'walk') && f.state !== 'crouch'){ res = {caught:false, escaped:true, escD:esc.d, escBeforePounce: esc.t < (G.events.find(e=>e.type==='pounce')||{t:1e9}).t, gf:esc.gf, vis:esc.vis, t:+t.toFixed(2)}; break; }
+    if (pounced && sp.mode === 'walk' && !esc){ res = {caught:false, escaped:false, t:+t.toFixed(2)}; break; }
+  }
+  inp.bot = null;
+  const gfPeak = +f.gfPeak.toFixed(1);
+  clearFlies();
+  flies = keep.flies; G.target = keep.target; G.lv = keep.lv; G.lab = false; Object.assign(sp, keep.sp);
+  OBST = keep.OBST; FRUITS = keep.FRUITS; BOUNDS = keep.BOUNDS; LIGHT = keep.LIGHT; G.events = keep.events; G.stats = keep.stats;
+  for (const fl of flies) scene.add(fl.mesh);
+  paused = wasPaused;
+  return Object.assign(res || {timeout:true}, {gfPeak});
+}
+function probe(speed, approach, gain){
+  // 일정 속도로 곧장 다가갈 때 거대섬유가 문턱을 넘는 거리 (도약 없음)
+  const wasPaused = paused; paused = true;
+  const keep = {lv:G.lv, flies, OBST, FRUITS, BOUNDS, LIGHT, events:G.events, sp:Object.assign({}, sp), stats:G.stats};
+  flies = []; G.lab = true; G.lv = Object.assign({}, LEVELS[0], {gain:gain||1}); G.events = []; G.stats = {escapes:0, cascade:0, ambush:0, pounces:0}; OBST = []; FRUITS = []; BOUNDS = {x0:-40,x1:40,z0:-40,z1:40}; LIGHT = null;
+  const f = newFly({at:{x:0,z:0}, h:0, state:'feed', dur:1e9}); f.wanderT = 1e9;
+  const a = {front:0, side:90, behind:180}[approach||'front']*DEG;
+  placeSpider(Math.sin(a)*6, Math.cos(a)*6);
+  let out = null;
+  for (let t=0;t<20;t+=1/60){
+    const d = Math.hypot(sp.x, sp.z);
+    if (d < .45) break;
+    // 속도를 정확히 고정하려고 위치를 직접 옮긴다
+    sp.x -= Math.sin(a)*speed/60; sp.z -= Math.cos(a)*speed/60; sp.vx = sp.vz = 0;
+    step(1/60);
+    const e = G.events.find(e => e.type === 'escape'); if (e){ out = e.d; break; }
+  }
+  clearFlies(); flies = keep.flies; G.lv = keep.lv; G.lab = false; OBST = keep.OBST; FRUITS = keep.FRUITS; BOUNDS = keep.BOUNDS; LIGHT = keep.LIGHT; G.events = keep.events; G.stats = keep.stats; Object.assign(sp, keep.sp);
+  for (const fl of flies) scene.add(fl.mesh);
+  paused = wasPaused;
+  return out;
+}
+window.__game = {
+  get state(){ return {phase:G.phase, level:G.level, score:G.score, time:+G.time.toFixed(2), kills:G.kills, quota:G.lv.quota, stats:Object.assign({}, G.stats),
+    spider:{x:+sp.x.toFixed(3), z:+sp.z.toFixed(3), h:+sp.h.toFixed(3), mode:sp.mode, cd:+sp.cd.toFixed(2)},
+    flies:flies.map(f => ({id:f.id, state:f.state, x:+f.x.toFixed(3), y:+f.y.toFixed(3), z:+f.z.toFixed(3), h:+f.h.toFixed(3), gf:+f.gf.toFixed(1), vis:f.spVis}))}; },
+  get obstacles(){ return OBST.map(b => Object.assign({}, b)); },
+  get bounds(){ return Object.assign({}, BOUNDS); },
+  G, sp, T, LEVELS, brainLoom, brainLight, eyeW,
+  start: startRun, startLevel: n => startLevel(n), menu: toMenu,
+  step(dt=1/60, n=1, draw=true){ for (let i=0;i<n;i++) step(dt); if (draw) render(0); return this.state; },
+  pause(b=true){ paused = b; },
+  input(x, z, sneak){ inp.bot = (x == null) ? null : {x, z, sneak:!!sneak}; },
+  pounce(){ inp.pounce = true; },
+  trial: runTrial, probe,
+  save: () => JSON.parse(JSON.stringify(save)),
+};
+
+fitCamera(); renderLevelGrid(); menuScene(); requestAnimationFrame(frame);
+</script>

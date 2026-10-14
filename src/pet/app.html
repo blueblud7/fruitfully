@@ -1,0 +1,1045 @@
+<title>초파리 키우기</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@500&display=swap');
+/* 레이아웃: 왼쪽(모바일은 위) 유리 사육장 3D, 오른쪽(모바일은 아래) 돌봄 패널. 색은 이끼·흙·꿀 */
+:root{
+  --bg:#e6ece0; --panel:#f7f9f2; --panel2:#edf2e6; --ink:#1e2a1b; --dim:#5a6954; --line:#cbd6c2;
+  --accent:#c9820a; --accent-soft:#f6e3b8; --accent-ink:#2b1a00;
+  --moss:#3d7437; --eye:#c4321e; --good:#2f8a3e;
+  --feed:#d9900f; --groom:#2f7fc1; --water:#2a9bbf;
+  --chip:rgba(247,249,242,.9); --shadow:0 6px 24px rgba(30,42,27,.18);
+  --f-display:"Jua","Gowun Dodum","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --f-body:"Gowun Dodum","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11170f; --panel:#192117; --panel2:#212b1e; --ink:#e7eee0; --dim:#9cab94; --line:#2f3b2b;
+    --accent:#efa630; --accent-soft:#3d2f12; --accent-ink:#241600;
+    --moss:#7cc070; --eye:#ff6e58; --good:#76c97b; --feed:#f0a930; --groom:#5aa9ec; --water:#4cc2e2;
+    --chip:rgba(25,33,23,.9); --shadow:0 6px 24px rgba(0,0,0,.45); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11170f; --panel:#192117; --panel2:#212b1e; --ink:#e7eee0; --dim:#9cab94; --line:#2f3b2b;
+  --accent:#efa630; --accent-soft:#3d2f12; --accent-ink:#241600;
+  --moss:#7cc070; --eye:#ff6e58; --good:#76c97b; --feed:#f0a930; --groom:#5aa9ec; --water:#4cc2e2;
+  --chip:rgba(25,33,23,.9); --shadow:0 6px 24px rgba(0,0,0,.45); color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;
+  -webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 380px;overflow:hidden}
+#panel > *{flex-shrink:0}
+#stage{position:relative;min-width:0;min-height:0;overflow:hidden}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+#panel{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;overflow-x:hidden;padding:14px 16px 18px;
+  display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:820px){
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,52fr) minmax(0,48fr)}
+  #panel{border-left:0;border-top:1px solid var(--line);padding:10px 12px 12px;gap:9px;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+}
+
+/* 상단 칩 */
+#hud{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;pointer-events:none;z-index:3}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:13px;line-height:1.2;white-space:nowrap;
+  font-variant-numeric:tabular-nums;box-shadow:var(--shadow);pointer-events:auto}
+.chip small{display:block;font-size:10px;color:var(--dim);letter-spacing:.04em}
+.chip b{font-family:var(--f-display);font-weight:400;font-size:17px}
+#hud .sp{flex:1}
+.cbtn{min-height:40px;min-width:40px;display:inline-flex;align-items:center;gap:5px;position:relative}
+.badge{position:absolute;top:-6px;right:-6px;background:var(--eye);color:#fff;border-radius:999px;font-size:11px;min-width:18px;height:18px;
+  display:grid;place-items:center;padding:0 5px;font-family:var(--f-mono)}
+.drop{display:inline-block;width:.7em;height:.85em;background:var(--accent);border-radius:50% 50% 50% 50%/60% 60% 40% 40%;vertical-align:-1px}
+
+/* 초파리 이름표 */
+#tags{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.tag{position:absolute;transform:translate(-50%,-100%);font-size:11px;white-space:nowrap;text-align:center}
+.tag .nm{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--ink)}
+.tag.sel .nm{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.say{display:block;margin:0 auto 3px;width:max-content;max-width:180px;white-space:normal;background:var(--panel);color:var(--ink);border:1px solid var(--line);
+  border-radius:10px;padding:4px 8px;font-size:12px;box-shadow:var(--shadow);font-variant-numeric:tabular-nums}
+.say.yes{border-color:var(--good)} .say.no{border-color:var(--eye)}
+.say em{font-style:normal;font-family:var(--f-mono);font-size:11px;color:var(--dim)}
+#toast{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:4;display:flex;flex-direction:column;gap:6px;align-items:center;
+  pointer-events:none;width:min(92%,420px)}
+.toast{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow);font-size:13px;
+  animation:tin .25s ease-out;text-align:center}
+.toast.disc{border-color:var(--accent);background:var(--accent-soft)}
+.toast b{font-family:var(--f-display);font-weight:400;font-size:15px}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+
+/* 패널 */
+.flyrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.flyrow::-webkit-scrollbar{display:none}
+.flybtn{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap;min-height:34px}
+.flybtn.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px}
+@media (max-width:820px){ .card{gap:9px} }
+.statl{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fname{font-family:var(--f-display);font-size:20px;line-height:1.1;display:flex;align-items:baseline;gap:6px}
+.fname small{font-family:var(--f-body);font-size:11px;color:var(--dim)}
+.st{display:grid;grid-template-columns:34px 1fr 28px;gap:6px;align-items:center;font-size:11px;color:var(--dim)}
+.st span:last-child{text-align:right;font-family:var(--f-mono);color:var(--ink)}
+.bar{position:relative;height:8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;overflow:visible}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--moss)}
+.bar .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
+.doing{font-size:12px;color:var(--ink);min-height:16px}
+.brain{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.brain .hd{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--dim)}
+.brain .hd strong{font-family:var(--f-display);font-weight:400;font-size:14px;color:var(--ink)}
+.bn{display:grid;grid-template-columns:68px 1fr 40px;gap:6px;align-items:center;font-size:11px}
+.bn label{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bn output{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.bn.feed i{background:var(--feed)} .bn.groom i{background:var(--groom)} .bn.water i{background:var(--water)}
+.inps{font-family:var(--f-mono);font-size:10.5px;color:var(--dim);line-height:1.4}
+.verdict{font-size:11.5px;min-height:15px}
+.verdict.yes{color:var(--good)} .verdict.no{color:var(--eye)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:6px 10px 7px;font-family:var(--f-display);font-size:15px;color:var(--dim);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--ink);border-color:var(--accent)}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
+@media (max-width:820px){ .tools{display:flex;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px} .tool{flex:0 0 74px} }
+.tool{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:7px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  min-height:62px;font-size:12px;line-height:1.15;text-align:center;position:relative}
+.tool .ic{font-size:22px;line-height:1}
+.tool.on{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.tool.lock{opacity:.5}
+.tool .n{position:absolute;top:3px;right:5px;font-family:var(--f-mono);font-size:10px;color:var(--dim)}
+.opts{font-size:12px;color:var(--dim);display:flex;flex-direction:column;gap:6px;min-height:20px}
+.opts .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.opts input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.opts output{font-family:var(--f-mono);color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--panel2);padding:6px 10px;font-size:12px;min-height:34px}
+.seg button.on{background:var(--ink);color:var(--panel)}
+.foot{font-size:11px;color:var(--dim);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:auto}
+.foot a{color:var(--dim)}
+.envrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:12px;background:var(--panel2);font-variant-numeric:tabular-nums}
+
+/* 일시정지 */
+#pauseOv{position:fixed;inset:0;z-index:12;background:rgba(15,20,12,.55);display:grid;place-items:center;padding:16px}
+#pauseOv .box{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:18px;width:min(520px,100%);padding:20px 18px 14px;box-shadow:var(--shadow)}
+#pauseOv h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0 0 6px}
+#pauseOv p{line-height:1.6;margin:6px 0}
+#pauseOv .sub{color:var(--eye);font-size:12.5px;min-height:18px}
+.prow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+a.exit{text-decoration:none;display:inline-flex;align-items:center;color:var(--ink)}
+#pauseBtn{font-size:13px}
+@media (max-width:480px){
+  #hud{gap:5px} #hud .chip{padding:5px 8px} .chip b{font-size:15px}
+  .cbtn .lb{display:none}
+}
+/* 시트 */
+#sheet{position:fixed;inset:0;z-index:10;background:rgba(15,20,12,.45);display:grid;place-items:center;padding:16px}
+#sheet .box{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:18px;width:min(560px,100%);max-height:100%;
+  overflow-y:auto;padding:18px 18px 16px;box-shadow:var(--shadow)}
+#sheet h2{font-family:var(--f-display);font-weight:400;font-size:26px;margin:0 0 4px;text-wrap:balance}
+#sheet h3{font-family:var(--f-display);font-weight:400;font-size:17px;margin:16px 0 6px}
+#sheet p{line-height:1.6;margin:6px 0;max-width:65ch}
+#sheet .sub{color:var(--dim);font-size:12.5px}
+.shd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.x{border:1px solid var(--line);background:var(--panel2);border-radius:10px;min-width:40px;min-height:40px;font-size:16px}
+.disc{border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin:7px 0;background:var(--panel2)}
+.disc.got{border-color:var(--accent);background:var(--accent-soft)}
+.disc .t{font-family:var(--f-display);font-size:15.5px}
+.disc .d{font-size:12.5px;line-height:1.55;margin-top:3px}
+.disc .m{font-family:var(--f-mono);font-size:11px;color:var(--dim);margin-top:3px}
+.prog{height:8px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);overflow:hidden;margin:8px 0 4px}
+.prog i{display:block;height:100%;background:var(--accent)}
+.tw{overflow-x:auto}
+table.t{border-collapse:collapse;font-size:12.5px;width:100%;font-variant-numeric:tabular-nums}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left}
+table.t th{color:var(--dim);font-weight:400;font-size:11.5px}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.item{border:1px solid var(--line);border-radius:12px;padding:9px;background:var(--panel2);display:flex;flex-direction:column;gap:4px}
+.item .t{font-family:var(--f-display);font-size:15px}
+.item .d{font-size:11.5px;color:var(--dim);line-height:1.45;flex:1}
+.buy{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:10px;min-height:36px;font-size:13px}
+.buy:disabled{background:var(--panel2);color:var(--dim);border-color:var(--line);cursor:default}
+.big{border:0;background:var(--accent);color:var(--accent-ink);border-radius:12px;min-height:46px;padding:0 22px;font-family:var(--f-display);font-size:18px}
+.ghost{border:1px solid var(--line);background:var(--panel2);border-radius:10px;min-height:38px;padding:0 12px;font-size:13px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px}
+.kv dt{color:var(--dim)} .kv dd{margin:0}
+.mono{font-family:var(--f-mono)}
+</style>
+
+<div id="app">
+  <div id="stage">
+    <div id="hud">
+      <div class="chip" id="clock"><small id="dayl">1일째</small><b id="timel">07:00</b></div>
+      <div class="chip"><small>꿀방울</small><b><span class="drop"></span> <span id="coins">0</span></b></div>
+      <span class="sp"></span>
+      <button class="chip cbtn" id="pauseBtn" aria-label="일시정지 (Esc 또는 P)">⏸<span class="lb"> 일시정지</span></button>
+      <button class="chip cbtn" id="speedBtn" aria-label="시간 빠르기">▶ 1×</button>
+      <button class="chip cbtn" id="journalBtn" aria-label="관찰 일지">📖<span class="lb"> 일지</span><span class="badge" id="newBadge" hidden>0</span></button>
+      <button class="chip cbtn" id="shopBtn" aria-label="상점">🛒<span class="lb"> 상점</span></button>
+      <button class="chip cbtn" id="helpBtn" aria-label="어떻게 작동하나요">?</button>
+    </div>
+    <div id="tags"></div>
+    <div id="toast"></div>
+  </div>
+  <aside id="panel">
+    <div class="flyrow" id="flyrow"></div>
+    <div class="card">
+      <div class="statl">
+        <div class="fname"><span id="fName">초롱</span><span id="fFace">😊</span><small id="fAge">1일째</small></div>
+        <div class="st"><span>포만</span><div class="bar"><i id="bSat"></i></div><span id="vSat">0</span></div>
+        <div class="st"><span>청결</span><div class="bar"><i id="bCln"></i></div><span id="vCln">0</span></div>
+        <div class="st"><span>기분</span><div class="bar"><i id="bMood"></i></div><span id="vMood">0</span></div>
+        <div class="doing" id="fDoing">…</div>
+      </div>
+      <div class="brain" aria-live="off">
+        <div class="hd"><strong>뇌 (커넥톰)</strong><span>발화율 Hz</span></div>
+        <div class="bn feed"><label>섭식 운동</label><div class="bar"><i id="bFeed"></i><span class="th" id="thFeed"></span></div><output id="vFeed">0</output></div>
+        <div class="bn water"><label>DNg67</label><div class="bar"><i id="bDng"></i></div><output id="vDng">0</output></div>
+        <div class="bn groom"><label>그루밍 운동</label><div class="bar"><i id="bGroom"></i></div><output id="vGroom">0</output></div>
+        <div class="inps" id="inps">입력 없음</div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+    </div>
+    <div>
+      <div class="tabs" role="tablist">
+        <button data-tab="food" class="on">먹이</button>
+        <button data-tab="care">돌보기</button>
+        <button data-tab="deco">꾸미기</button>
+      </div>
+    </div>
+    <div class="tools" id="tools"></div>
+    <div class="opts" id="opts"></div>
+    <div class="foot"><span>FlyWire 783 커넥톰 · Shiu 외 2024 LIF 모델</span><a href="https://fruitfly.blueming.net/" target="_blank" rel="noopener">초파리 뇌 실험실 ↗</a></div>
+  </aside>
+</div>
+<div id="sheet" hidden><div class="box" id="sheetBox"></div></div>
+<div id="pauseOv" class="ov" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="pauseH">
+  <h2 id="pauseH">일시정지</h2>
+  <p>사육장 시간이 멈췄어요. 초파리도 먹이도 그대로예요. Esc나 P를 다시 누르면 이어서 해요.</p>
+  <div class="prow"><button class="big" id="resumeBtn">계속하기</button><button class="ghost" id="restartBtn">처음부터 다시</button><button class="ghost" id="menuBtn">처음 화면</button><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로 나가기</a></div>
+  <p class="sub" id="restartQ"></p>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+/* 커넥톰 반응표: FlyWire 783 전체 뇌 LIF 시뮬레이션(Shiu 외 2024 모델), 300ms 정상상태 발화율(Hz).
+   levels = 감각 뉴런 하나당 입력 Hz. taste["설탕,쓴맛"], water["물"], groom["촉각털,JO-CE"] */
+const E = /*DATA*/null;
+
+/* ================= 뇌 반응표 보간 (fly-escape ④⑤와 같은 방식) ================= */
+function seg(levels, x){
+  x = Math.max(levels[0], Math.min(levels[levels.length-1], x));
+  let i = 0; while (i < levels.length-2 && levels[i+1] <= x) i++;
+  return [i, (x-levels[i])/(levels[i+1]-levels[i])];
+}
+function interp2(tb, a, b){
+  const L = E.levels, [i,fi] = seg(L,a), [j,fj] = seg(L,b);
+  const A = tb[L[i]+','+L[j]], B = tb[L[i+1]+','+L[j]], C = tb[L[i]+','+L[j+1]], D = tb[L[i+1]+','+L[j+1]];
+  const o = {}; for (const k in A) o[k] = A[k]*(1-fi)*(1-fj) + B[k]*fi*(1-fj) + C[k]*(1-fi)*fj + D[k]*fi*fj;
+  return o;
+}
+function interp1(tb, x){
+  const L = E.levels, [i,f] = seg(L,x), A = tb[L[i]], B = tb[L[i+1]];
+  const o = {}; for (const k in A) o[k] = A[k]*(1-f) + B[k]*f; return o;
+}
+const avg2 = (b, k) => (b[k+'_L'] + b[k+'_R'])/2;
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+const rnd = (a=1) => (Math.random()*2-1)*a;
+const lerp = (a,b,k) => a + (b-a)*k;
+const fmt = v => v < 9.95 ? v.toFixed(1) : Math.round(v).toString();
+const $ = id => document.getElementById(id);
+const wrapAng = a => Math.atan2(Math.sin(a), Math.cos(a));
+
+/* 맛 감각 → 커넥톰. 먹이 성분(감각 뉴런 입력 Hz) → 판독 뉴런 발화율 */
+function tasteBrain(s, b, w){
+  if (w > 0 && s === 0 && b === 0) return interp1(E.water, w);   // 물 표는 따로 계산됨
+  return interp2(E.taste, s, b);
+}
+const ZERO_T = interp2(E.taste, 0, 0);
+const FEED_TH = 15;     // 먹기 문턱: 섭식 운동뉴런 양쪽 평균 15Hz (손으로 정한 값)
+const CLEAN_K = 0.25;   // 먼지 제거: 그루밍 운동뉴런 1Hz당 0.25%/초 (손으로 정한 값)
+// 감각 변환(가정): 먼지가 조금이라도 붙으면 촉각털이 최소 50Hz로 발화, 많을수록 100Hz까지
+const dustToHz = d => d > 0 ? clamp(50 + 50*Math.sqrt(d/100), 0, 100) : 0;
+
+/* ================= 게임 데이터 ================= */
+const DAY = 160;          // 실제 160초 = 하루 (1× 기준)
+const BOUND = {x:5.4, z:3.4};
+const FOODS = {
+  sugar: {name:'설탕물', ic:'🥛', s:100, b:0, w:0, amt:60, spoil:0, price:0, desc:'농도를 고를 수 있다. 농도 % = 설탕 감각 입력 Hz'},
+  water: {name:'맹물', ic:'💧', s:0, b:0, w:100, amt:60, spoil:0, price:0, desc:'물 감각 뉴런 100Hz'},
+  banana:{name:'바나나', ic:'🍌', s:100, b:10, w:0, amt:90, spoil:30, price:0, desc:'설탕 100 · 쓴맛 10Hz. 두면 상한다'},
+  grape: {name:'포도알', ic:'🍇', s:90, b:0, w:0, amt:70, spoil:30, price:6, desc:'설탕 90Hz. 두면 상한다'},
+  peel:  {name:'자몽 껍질', ic:'🍊', s:100, b:40, w:0, amt:60, spoil:20, price:6, desc:'달지만 쓰다. 설탕 100 · 쓴맛 40Hz'},
+  leaf:  {name:'쓴 잎', ic:'🌿', s:0, b:100, w:0, amt:50, spoil:0, price:4, desc:'쓴맛 100Hz만'},
+  honey: {name:'꿀 한 방울', ic:'🍯', s:100, b:0, w:0, amt:150, spoil:0, price:12, desc:'설탕 100Hz. 양이 많고 상하지 않는다'}
+};
+const FRUIT = {banana:1, grape:1};
+const DECOS = {
+  moss:   {name:'이끼 언덕', ic:'🌱', price:4, mood:1, desc:'푹신한 초록'},
+  pebble: {name:'조약돌', ic:'🪨', price:3, mood:1, desc:'반들반들'},
+  shroom: {name:'버섯', ic:'🍄', price:6, mood:1, desc:'빨간 갓에 흰 점'},
+  twig:   {name:'나뭇가지', ic:'🪵', price:5, mood:1, desc:'올라앉기 좋다'},
+  daisy:  {name:'데이지', ic:'🌼', price:8, mood:2, pollen:1, desc:'기분이 오르지만 꽃가루가 날린다'},
+  marble: {name:'유리구슬', ic:'🔮', price:10, mood:2, desc:'빛을 모은다'}
+};
+const NAMES = ['초롱','방울','깨비','보리','콩알','단비'];
+const MAX_FLIES = 4, MAX_FOOD = 8, MAX_DECO = 12;
+
+/* 관찰 일지: 모든 항목이 커넥톰 반응표에서 실제로 측정된 값에 묶여 있다 */
+const DISC = [
+  {id:'sweet', t:'진한 단맛이면 먹는다', hint:'진한 설탕물(100%)을 줘 보면?', d:`설탕 감각 뉴런 ${E.counts.sugar}개가 100Hz로 발화하면 섭식 운동뉴런이 약 36Hz. 먹기 문턱 15Hz를 넉넉히 넘는다.`},
+  {id:'weak', t:'묽은 설탕물은 거들떠보지 않는다', hint:'설탕물을 묽게(80% 이하) 타 보면?', d:'설탕 75Hz면 섭식 운동뉴런 5Hz, 50Hz면 1Hz. 단맛 반응은 서서히 커지지 않고 75~100Hz 사이에서 갑자기 켜진다.'},
+  {id:'edge', t:'먹는 경계는 약 84%', hint:'85~90% 사이 설탕물은 어떨까?', d:'85%면 약 17Hz, 90%면 약 24Hz로 문턱을 넘는다. 80%(약 11Hz)는 못 넘는다. 경계는 84% 근처.'},
+  {id:'bitterbit', t:'쓴맛이 조금만 섞여도 안 먹는다', hint:'달면서 쓴 자몽 껍질을 줘 보면?', d:'설탕 100Hz에 쓴맛 40Hz만 섞여도 섭식 운동뉴런이 36Hz에서 약 8Hz로 꺼진다. 쓴맛 50Hz 이상이면 약 1Hz.'},
+  {id:'bitteronly', t:'쓴맛만으로는 아무것도 켜지지 않는다', hint:'쓴 잎만 줘 보면?', d:`쓴맛 감각 뉴런 ${E.counts.bitter}개를 100Hz로 자극해도 섭식 운동뉴런은 0Hz. 쓴맛은 단맛 신호를 꺾을 뿐, 혼자서는 이 판독 뉴런을 움직이지 않는다.`},
+  {id:'banana', t:'약한 쓴맛은 단맛이 이긴다', hint:'바나나를 줘 보면?', d:'설탕 100 + 쓴맛 10Hz면 약 25Hz. 쓴맛이 신호를 깎지만(36→25Hz) 문턱 위라 먹는다.'},
+  {id:'spoiled', t:'상한 과일은 안 먹는다', hint:'과일을 오래 두면?', d:'과일이 상하면서 쓴맛 입력이 오르면(손으로 정한 속도) 섭식 운동뉴런이 문턱 아래로 떨어진다. 설탕 100Hz일 때 쓴맛 30Hz가 경계(15Hz).'},
+  {id:'water', t:'물은 다른 회로를 켠다', hint:'맹물을 줘 보면?', d:`물 감각 뉴런 ${E.counts.water}개 100Hz → DNg67이 약 55Hz로 켜지지만 섭식 운동뉴런은 0Hz. 이 모델에는 목마름 같은 몸 상태가 없어서 물을 삼키지 않는다.`},
+  {id:'groom', t:'먼지가 그루밍을 켠다', hint:'꽃가루를 묻혀 보면?', d:`더듬이 촉각털 감각 뉴런 ${E.counts.antenna_bristle}개 입력 → 그루밍 운동뉴런(CB0810)이 발화하고 앞다리로 더듬이를 닦는다. 100Hz 입력이면 약 60Hz.`},
+  {id:'soft', t:'살살 건드리면 닦지 않는다', hint:'깨끗한 초파리를 붓으로 살살 쓸어 보면?', d:'촉각털 입력 30Hz 이하에서는 그루밍 운동뉴런이 0Hz. 50Hz면 약 15Hz, 100Hz면 약 60Hz. 문턱이 있다.'},
+  {id:'jo', t:'더듬이를 흔들기만 하면 그대로', hint:'깨끗한 초파리에게 바람을 불어 보면?', d:`존스턴 기관 JO-CE(${E.counts.JO_CE}개)만 100Hz로 자극하면 그루밍 운동뉴런이 0Hz. 실제 초파리 실험에서는 JO-CE가 그루밍을 일으킨다는 보고가 있어, 이 모델(300ms, 이 판독 뉴런)의 한계일 수 있다.`},
+  {id:'done', t:'먼지가 사라지면 멈춘다', hint:'꽃가루를 듬뿍 묻히고 끝까지 지켜보면?', d:'먼지가 줄수록 촉각털 입력과 그루밍 운동뉴런 발화가 함께 줄고, 0이 되면 멈춘다. (먼지 → 최소 50Hz 가정이 없으면 약 9% 남은 채 멈춘다)'}
+];
+const DISC_REWARD = 10;
+
+/* ================= 상태 ================= */
+let S, uid = 1;
+function freshState(){
+  return {v:1, t:0, coins:8, speed:1, sel:0, temp:24, dirt:12,
+    flies:[newFlyState(0, -1.5, 0.3)], foods:[], decos:[{kind:'moss', x:3.8, z:-2.4}, {kind:'pebble', x:-4.2, z:2.2}],
+    inv:{}, unlocked:{sugar:1, water:1, banana:1}, disc:{}, seen:{}, log:[], tally:{}, tool:'sugar', tab:'food', conc:100, brushHz:30,
+    intro:false, lastMorning:1, uid:10};
+}
+function newFlyState(i, x, z){
+  return {id:'f'+(i+1)+'_'+Math.floor(Math.random()*1e6), name:NAMES[i % NAMES.length], x, z, h:Math.random()*6.28, y:0,
+    sat:70, dust:0, mood:65, born:0, mem:{}, state:'wander', timer:0, target:null};
+}
+
+/* ================= 시간 ================= */
+const hourOf = t => (7 + t/DAY*24) % 24;
+const dayOf = t => Math.floor((t/DAY*24 + 1)/24) + 1;   // 06:00에 날짜가 바뀐다
+const isNight = t => { const h = hourOf(t); return h >= 21 || h < 6; };
+function daylight(t){
+  const h = hourOf(t);
+  if (h >= 7 && h < 19.5) return 1;
+  if (h >= 5.5 && h < 7) return (h-5.5)/1.5;
+  if (h >= 19.5 && h < 21) return 1-(h-19.5)/1.5;
+  return 0;
+}
+
+/* ================= 렌더 기본 ================= */
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const DAYBG = new THREE.Color(0xcfe0c9), NIGHTBG = new THREE.Color(0x182036);
+scene.background = DAYBG.clone();
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+const hemi = new THREE.HemisphereLight(0xfffbea, 0x4d5a38, 0.85); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff1d6, 0.7); sun.position.set(6, 14, 8); scene.add(sun);
+const moonL = new THREE.PointLight(0x9fb8ff, 0, 30); moonL.position.set(-4, 8, 2); scene.add(moonL);
+
+function pixTex(base, noise, seed){
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d'); let s = seed;
+  const r = () => (s = (s*16807) % 2147483647) / 2147483647;
+  for (let y=0;y<16;y++) for (let x=0;x<16;x++){
+    const k = 1 + (r()-0.5)*noise;
+    g.fillStyle = `rgb(${clamp(base[0]*k,0,255)|0},${clamp(base[1]*k,0,255)|0},${clamp(base[2]*k,0,255)|0})`;
+    g.fillRect(x,y,1,1);
+  }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; return t;
+}
+const BOX = new THREE.BoxGeometry(1,1,1);
+const MAT = {
+  soil:  new THREE.MeshLambertMaterial({map: pixTex([112,80,55],.35,11)}),
+  moss:  new THREE.MeshLambertMaterial({map: pixTex([92,150,70],.4,7)}),
+  wood:  new THREE.MeshLambertMaterial({map: pixTex([150,112,72],.25,3)}),
+  table: new THREE.MeshLambertMaterial({map: pixTex([196,166,120],.15,5)}),
+  stone: new THREE.MeshLambertMaterial({map: pixTex([140,140,136],.3,5)}),
+  glass: new THREE.MeshPhongMaterial({color:0xdff3ff, transparent:true, opacity:.10, shininess:90, depthWrite:false, side:THREE.DoubleSide})
+};
+const _mc = {};
+function mat(color, opts){ const k = color + JSON.stringify(opts||{}); return _mc[k] || (_mc[k] = new THREE.MeshLambertMaterial(Object.assign({color}, opts||{}))); }
+function vox(g, sx, sy, sz, m, x, y, z){ const o = new THREE.Mesh(BOX, typeof m === 'number' ? mat(m) : m); o.scale.set(sx,sy,sz); o.position.set(x,y,z); g.add(o); return o; }
+
+// 사육장
+const tank = new THREE.Group(); scene.add(tank);
+(function buildTank(){
+  const W = 12, D = 8;
+  const soil = [], mossL = [];
+  for (let x=0;x<W;x++) for (let z=0;z<D;z++) ((x*7+z*13)%5===0 ? mossL : soil).push([x-W/2, z-D/2]);
+  const inst = (list, m, y, h) => { const im = new THREE.InstancedMesh(BOX, m, list.length), o = new THREE.Object3D();
+    list.forEach((p,i)=>{ o.position.set(p[0]+.5, y, p[1]+.5); o.scale.set(1,h,1); o.updateMatrix(); im.setMatrixAt(i,o.matrix); }); tank.add(im); };
+  inst(soil, MAT.soil, -.5, 1); inst(mossL, MAT.moss, -.47, 1.06);
+  // 받침대(나무 테이블)
+  vox(tank, W+5, .6, D+4, MAT.table, 0, -1.3, 0.6);
+  // 유리 벽
+  const H = 3.4;
+  const glass = (w,h,x,y,z,ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), MAT.glass); m.position.set(x,y,z); m.rotation.y = ry; tank.add(m); };
+  glass(W, H, 0, H/2-1, -D/2-.05, 0); glass(W, H, 0, H/2-1, D/2+.05, 0);
+  glass(D, H, -W/2-.05, H/2-1, 0, Math.PI/2); glass(D, H, W/2+.05, H/2-1, 0, Math.PI/2);
+  // 모서리 나무틀
+  for (const sx of [-1,1]) for (const sz of [-1,1]) vox(tank, .22, H, .22, MAT.wood, sx*(W/2+.05), H/2-1, sz*(D/2+.05));
+  for (const sz of [-1,1]) { vox(tank, W+.3, .2, .22, MAT.wood, 0, H-1, sz*(D/2+.05)); vox(tank, W+.3, .3, .22, MAT.wood, 0, -.85, sz*(D/2+.05)); }
+  for (const sx of [-1,1]) { vox(tank, .22, .2, D+.3, MAT.wood, sx*(W/2+.05), H-1, 0); vox(tank, .22, .3, D+.3, MAT.wood, sx*(W/2+.05), -.85, 0); }
+  // 망사 뚜껑
+  const lid = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshLambertMaterial({color:0xe9e4d4, transparent:true, opacity:.18, depthWrite:false, side:THREE.DoubleSide}));
+  lid.rotation.x = -Math.PI/2; lid.position.y = H-1; tank.add(lid);
+})();
+// 바닥 먼지(사육장 지저분함)
+const DIRT_N = 70;
+const dirtMesh = new THREE.InstancedMesh(BOX, mat(0x6b5a44), DIRT_N); tank.add(dirtMesh);
+const dirtPos = Array.from({length:DIRT_N}, () => [rnd(5.6), rnd(3.7), .05 + Math.random()*.1]);
+function updateDirt(){
+  const o = new THREE.Object3D(), n = Math.round(S.dirt/100*DIRT_N);
+  dirtPos.forEach((p,i) => { o.position.set(p[0], .02, p[1]); o.scale.setScalar(i < n ? p[2] : 0.0001); o.updateMatrix(); dirtMesh.setMatrixAt(i, o.matrix); });
+  dirtMesh.instanceMatrix.needsUpdate = true;
+}
+// 선택 고리
+const ring = new THREE.Mesh(new THREE.RingGeometry(.55,.66,24), new THREE.MeshBasicMaterial({color:0xe6a020, transparent:true, opacity:.85, side:THREE.DoubleSide}));
+ring.rotation.x = -Math.PI/2; scene.add(ring);
+
+/* ================= 초파리 모델 (fly-escape와 같은 복셀 초파리) ================= */
+const FLY_S = 0.95;
+function makeFly(){
+  const g = new THREE.Group();
+  const body = mat(0x8a6a3a), dark = mat(0x3a2a18), eye = mat(0xd8281f, {emissive:0x400000});
+  const wing = mat(0xe8f1ff, {transparent:true, opacity:.55, side:THREE.DoubleSide});
+  const add = (geo, m, x,y,z) => { const o = new THREE.Mesh(geo, m); o.position.set(x,y,z); g.add(o); return o; };
+  add(new THREE.BoxGeometry(.5,.45,.6), body, 0,.45,0);
+  for (let i=0;i<3;i++) add(new THREE.BoxGeometry(.46-i*.08,.38-i*.06,.18), i%2?dark:body, 0,.42,-.38-i*.17);
+  add(new THREE.BoxGeometry(.42,.36,.3), body, 0,.5,.42);
+  add(new THREE.BoxGeometry(.16,.24,.2), eye, -.2,.55,.45);
+  add(new THREE.BoxGeometry(.16,.24,.2), eye,  .2,.55,.45);
+  const wl = add(new THREE.BoxGeometry(.5,.02,.75), wing, -.32,.7,-.25);
+  const wr = add(new THREE.BoxGeometry(.5,.02,.75), wing,  .32,.7,-.25);
+  const legs = [];
+  for (const sx of [-1,1]) for (let i=1;i<3;i++){ const l = add(new THREE.BoxGeometry(.05,.3,.05), dark, sx*.28,.18,.2-i*.2); l.rotation.z = sx*.5; legs.push(l); }
+  const front = [-1,1].map(sx => { const p = new THREE.Group(); p.position.set(sx*.2,.33,.24); p.rotation.z = sx*.5; g.add(p);
+    const l = new THREE.Mesh(new THREE.BoxGeometry(.05,.36,.05), dark); l.position.y = -.17; p.add(l); return p; });
+  for (const sx of [-1,1]){ const a = add(new THREE.BoxGeometry(.05,.13,.05), dark, sx*.07,.62,.6); a.rotation.x = .5; }
+  const pb = new THREE.Group(); pb.position.set(0,.36,.5); g.add(pb);
+  const pm = new THREE.Mesh(new THREE.BoxGeometry(.07,.3,.07), dark); pm.position.y = -.15; pb.add(pm);
+  pb.rotation.x = -.35; pb.scale.y = .25;
+  // 더듬이 먼지 알갱이
+  const motes = []; const mm = mat(0xf2d64b, {emissive:0x5a4a00});
+  for (let i=0;i<8;i++){ const m = add(BOX, mm, rnd(.2), .6+Math.random()*.2, .55+Math.random()*.15); m.scale.setScalar(.05+Math.random()*.03); m.visible = false; motes.push(m); }
+  g.scale.setScalar(FLY_S);
+  g.userData = {wl, wr, front, pb, motes, legs};
+  return g;
+}
+
+/* ================= 먹이·장식 모델 ================= */
+function foodMesh(f){
+  const g = new THREE.Group(), own = c => new THREE.MeshLambertMaterial({color:c});
+  const parts = [];
+  if (f.kind === 'sugar' || f.kind === 'water'){
+    vox(g, .9, .1, .9, 0xf3f1ea, 0, .05, 0);
+    for (const [x,z,w,d] of [[0,.42,.9,.08],[0,-.42,.9,.08],[.42,0,.08,.9],[-.42,0,.08,.9]]) vox(g, w, .2, d, 0xf3f1ea, x, .1, z);
+    const c = f.kind === 'water' ? new THREE.Color(0x7cc8f0) : new THREE.Color(0xfffaf0).lerp(new THREE.Color(0xf0c35a), clamp((f.s-50)/50,0,1));
+    const liq = new THREE.MeshLambertMaterial({color:c, transparent:true, opacity:.85, emissive:c, emissiveIntensity:.12});
+    parts.push(vox(g, .76, .1, .76, liq, 0, .14, 0));
+  } else if (f.kind === 'banana'){
+    const m = own(0xf2d03a);
+    [[-.3,.12,-.2],[-.12,.1,-.05],[.08,.1,.05],[.28,.12,.12]].forEach(p => parts.push(vox(g, .26, .2, .26, m, ...p)));
+    vox(g, .1, .1, .1, 0x5a4020, -.42, .16, -.27); vox(g, .1, .1, .1, 0x5a4020, .4, .16, .18);
+  } else if (f.kind === 'grape'){
+    const m = own(0x7a3fa0);
+    [[0,.15,0],[.2,.13,.1],[-.18,.13,.12],[.05,.13,-.2],[0,.32,.05]].forEach(p => parts.push(vox(g, .24, .24, .24, m, ...p)));
+    vox(g, .05, .14, .05, 0x4a6a2a, 0, .48, .05);
+  } else if (f.kind === 'peel'){
+    const m = own(0xf08a5a), w = own(0xfbe7d2);
+    parts.push(vox(g, .8, .08, .36, m, 0, .05, 0)); parts.push(vox(g, .7, .06, .26, w, 0, .1, 0));
+    parts.push(vox(g, .08, .2, .36, m, -.38, .12, 0)); parts.push(vox(g, .08, .2, .36, m, .38, .12, 0));
+  } else if (f.kind === 'leaf'){
+    const m = own(0x2f5e2a);
+    vox(g, .7, .05, .28, m, 0, .04, 0); vox(g, .5, .05, .44, m, 0, .045, 0); vox(g, .8, .02, .04, 0x8fbf6a, 0, .075, 0);
+  } else if (f.kind === 'honey'){
+    const m = new THREE.MeshLambertMaterial({color:0xe39a12, transparent:true, opacity:.9, emissive:0x6a3a00, emissiveIntensity:.3});
+    vox(g, .6, .14, .6, m, 0, .07, 0); vox(g, .42, .14, .42, m, 0, .2, 0); vox(g, .2, .12, .2, m, 0, .32, 0); vox(g, .08,.08,.08, 0xfff4c8, -.08,.3,.08);
+  }
+  // 곰팡이 점 (상하면 보인다)
+  const mold = new THREE.Group(); g.add(mold);
+  for (let i=0;i<5;i++) vox(mold, .09, .05, .09, 0x9fbf8a, rnd(.25), .26, rnd(.15));
+  mold.visible = false;
+  g.userData = {parts, mold, base:parts.map(p => p.material.color.clone())};
+  return g;
+}
+function decoMesh(kind){
+  const g = new THREE.Group();
+  if (kind === 'moss'){ vox(g, 1.6, .35, 1.2, MAT.moss, 0, .17, 0); vox(g, 1, .3, .8, MAT.moss, .1, .45, -.05); vox(g, .4, .2, .4, 0x7fbf5a, -.4, .4, .3); }
+  else if (kind === 'pebble'){ vox(g, .6, .3, .5, MAT.stone, 0, .15, 0); vox(g, .4, .22, .4, MAT.stone, .5, .11, .3); vox(g, .3, .18, .3, 0xb9b3a8, -.45, .09, .25); }
+  else if (kind === 'shroom'){ vox(g, .2, .6, .2, 0xf2ead8, 0, .3, 0); vox(g, .8, .2, .8, 0xc8321e, 0, .66, 0); vox(g, .5, .14, .5, 0xc8321e, 0, .82, 0);
+    for (const [x,z] of [[.25,.2],[-.2,-.25],[.1,-.3],[-.3,.15]]) vox(g, .1, .05, .1, 0xffffff, x, .9, z); }
+  else if (kind === 'twig'){ const o = vox(g, 2.2, .16, .16, MAT.wood, 0, .3, 0); o.rotation.z = .18; vox(g, .7, .1, .1, MAT.wood, .5, .48, .15).rotation.y = .7; vox(g, .2, .3, .2, MAT.wood, -.9, .1, 0); }
+  else if (kind === 'daisy'){ vox(g, .06, .9, .06, 0x4f8a35, 0, .45, 0); vox(g, .3, .05, .12, 0x4f8a35, .12, .3, 0);
+    for (const [x,z] of [[.18,0],[-.18,0],[0,.18],[0,-.18]]) vox(g, .16, .06, .16, 0xffffff, x, .92, z); vox(g, .14, .1, .14, 0xf2c330, 0, .95, 0); }
+  else if (kind === 'marble'){ vox(g, .5, .5, .5, new THREE.MeshPhongMaterial({color:0x6ab7ff, transparent:true, opacity:.7, shininess:100}), 0, .25, 0); vox(g, .1,.1,.1, 0xffffff, -.12,.38,.12); }
+  return g;
+}
+
+/* ================= 장면 동기화 ================= */
+const view = {flies:new Map(), foods:new Map(), decos:[]};
+function syncScene(){
+  // 초파리
+  const ids = new Set(S.flies.map(f => f.id));
+  for (const [id, v] of view.flies) if (!ids.has(id)){ tank.remove(v.mesh); v.tag.remove(); view.flies.delete(id); }
+  S.flies.forEach(f => { if (!view.flies.has(f.id)){
+    const mesh = makeFly(); tank.add(mesh);
+    const tag = document.createElement('div'); tag.className = 'tag'; tag.innerHTML = '<span class="say" hidden></span><span class="nm"></span>'; $('tags').appendChild(tag);
+    view.flies.set(f.id, {mesh, tag, phase:Math.random()*6, flap:0, sayT:0, sayHTML:''});
+  }});
+  // 먹이
+  const fids = new Set(S.foods.map(f => f.id));
+  for (const [id, m] of view.foods) if (!fids.has(id)){ tank.remove(m); view.foods.delete(id); }
+  S.foods.forEach(f => { if (!view.foods.has(f.id)){ const m = foodMesh(f); m.position.set(f.x, 0, f.z); m.rotation.y = f.rot || 0; tank.add(m); view.foods.set(f.id, m); }});
+  // 장식
+  view.decos.forEach(m => tank.remove(m)); view.decos = S.decos.map(d => { const m = decoMesh(d.kind); m.position.set(d.x, 0, d.z); m.rotation.y = d.rot || 0; tank.add(m); return m; });
+  updateDirt();
+}
+
+/* ================= 시뮬레이션 ================= */
+const fruitBase = f => FOODS[f.kind].b;
+function foodChem(f){ return {s:f.s, b:f.b, w:f.w}; }
+function say(f, html, kind){ const v = view.flies.get(f.id); if (v){ v.sayHTML = `<span class="say ${kind||''}">${html}</span>`; v.sayT = 2.8; v.dirty = true; } }
+function toast(html, cls, ms=2600){
+  const t = document.createElement('div'); t.className = 'toast ' + (cls||''); t.innerHTML = html; $('toast').appendChild(t);
+  while ($('toast').children.length > 3) $('toast').firstChild.remove();
+  setTimeout(() => t.remove(), ms);
+}
+function discover(id, measured){
+  if (S.disc[id]) return false;
+  const d = DISC.find(x => x.id === id); if (!d) return false;
+  S.disc[id] = {day:dayOf(S.t), m:measured}; S.coins += DISC_REWARD;
+  toast(`<b>새 발견!</b> ${d.t}<br><span class="sub">관찰 일지에 기록 · <span class="drop"></span> +${DISC_REWARD}</span>`, 'disc', 4200);
+  refreshBadge(); return true;
+}
+function tally(kind, eat, fm){
+  const k = S.tally[kind] || (S.tally[kind] = {eat:0, rej:0, last:0});
+  if (eat) k.eat++; else k.rej++; k.last = fm;
+}
+function happinessTarget(f){
+  const t = S.temp, tc = t >= 22 && t <= 26 ? 100 : clamp(100 - 18*Math.min(Math.abs(t-22), Math.abs(t-26)), 0, 100);
+  const decoScore = clamp(S.decos.reduce((a,d) => a + DECOS[d.kind].mood, 0) * 15, 0, 100);
+  let m = .38*f.sat + .17*(100-f.dust) + .2*(100-S.dirt) + .13*tc + .12*decoScore;
+  if (f.sat < 15) m -= 15;
+  return clamp(m, 0, 100);
+}
+const speedOfTemp = () => clamp(.55 + (S.temp-18)/12*.75, .55, 1.3);   // 변온동물: 따뜻하면 빨리 걷는다 (손으로 정함)
+
+function walkTo(f, x, z, dt, sp){
+  const want = Math.atan2(x-f.x, z-f.z);
+  f.h += clamp(wrapAng(want - f.h), -5*dt, 5*dt);
+  const go = Math.abs(wrapAng(want - f.h)) < 1.2 ? 1 : .3;
+  f.x = clamp(f.x + Math.sin(f.h)*sp*dt*go, -BOUND.x, BOUND.x); f.z = clamp(f.z + Math.cos(f.h)*sp*dt*go, -BOUND.z, BOUND.z);
+}
+function nearestFood(f){
+  let best = null, bd = 1e9;
+  for (const d of S.foods){
+    if (f.mem[d.id] != null && S.t - f.mem[d.id] < 45) continue;   // 방금 거부한 먹이는 잠시 피한다
+    const dist = Math.hypot(d.x-f.x, d.z-f.z); if (dist < bd){ bd = dist; best = d; }
+  }
+  return best;
+}
+
+function stepFly(f, i, dt){
+  const night = isNight(S.t), sp = speedOfTemp();
+  f.brushT = Math.max(0, (f.brushT||0) - dt); f.windT = Math.max(0, (f.windT||0) - dt);
+  // ---- 그루밍: 커넥톰 ----
+  const dustHz = dustToHz(f.dust);
+  const bristle = Math.max(dustHz, f.brushT > 0 ? f.brushHz : 0);
+  const jo = f.windT > 0 ? 100 : 0;
+  const gb = interp2(E.groom, bristle, jo), g = avg2(gb, 'groomMN');
+  f.gIn = {bristle, jo}; f.g = g;
+  // 자극 실험 발견 (먼지가 없을 때의 순수한 반응)
+  if (f.brushT > 0 && f.dust === 0 && jo === 0){ f.probeT = (f.probeT||0) + dt; if (f.probeT > .8 && f.brushHz <= 30 && g < .5) discover('soft', `촉각털 ${fmt(bristle)}Hz → 그루밍 운동뉴런 ${fmt(g)}Hz`); }
+  else if (f.windT > 0 && bristle === 0){ f.probeT = (f.probeT||0) + dt; if (f.probeT > .8 && g < .5) discover('jo', `JO-CE ${jo}Hz → 그루밍 운동뉴런 ${fmt(g)}Hz`); }
+  else f.probeT = 0;
+
+  // ---- 맛: 커넥톰 ----
+  let tb = ZERO_T, tin = {s:0, b:0, w:0};
+  const food = f.target ? S.foods.find(d => d.id === f.target) : null;
+  if ((f.state === 'taste' || f.state === 'eat') && !food){ f.state = 'wander'; f.target = null; }
+
+  if (f.state === 'taste'){
+    // 발목 맛 감각이 닿는 0.6초 동안 입력이 차오르고, 1.3초에 결정
+    f.timer += dt; const k = clamp(f.timer/.6, 0, 1), c = foodChem(food);
+    tin = {s:c.s*k, b:c.b*k, w:c.w*k}; tb = tasteBrain(tin.s, tin.b, tin.w);
+    f.h += clamp(wrapAng(Math.atan2(food.x-f.x, food.z-f.z) - f.h), -6*dt, 6*dt);
+    if (f.timer > 1.3){
+      const fm = avg2(tb, 'feedMN'), eat = fm >= FEED_TH;
+      S.log.push({t:+S.t.toFixed(1), fly:f.name, kind:food.kind, s:c.s, b:+c.b.toFixed(1), w:c.w, fm:+fm.toFixed(2), dng:+avg2(tb,'DNg67').toFixed(1), eat});
+      if (S.log.length > 200) S.log.shift();
+      tally(food.kind, eat, fm);
+      checkTasteDiscovery(food, c, fm, tb, eat);
+      if (eat){ f.state = 'eat'; f.timer = 0; say(f, `냠! <em>${fmt(fm)}Hz ≥ ${FEED_TH}</em>`, 'yes'); }
+      else { f.state = 'leave'; f.timer = 0; f.mem[food.id] = S.t; f.target = null; f.h += Math.PI*.8 + rnd(.4);
+        say(f, (food.kind === 'water' ? '홀짝… 안 삼켜' : '싫어') + ` <em>${fmt(fm)}Hz &lt; ${FEED_TH}</em>`, 'no'); }
+    }
+  } else if (f.state === 'eat'){
+    f.timer += dt; const c = foodChem(food); tin = c; tb = tasteBrain(c.s, c.b, c.w);
+    const fm = avg2(tb, 'feedMN');
+    if (fm < FEED_TH){ f.state = 'leave'; f.timer = 0; f.mem[food.id] = S.t; f.target = null; say(f, `맛이 변했어 <em>${fmt(fm)}Hz</em>`, 'no'); }
+    else {
+      const bite = .12*fm*dt;   // 먹는 속도 ∝ 섭식 운동뉴런 발화 (손으로 정한 계수)
+      f.sat = Math.min(100, f.sat + bite); food.amt -= bite;
+      if (food.amt <= 0){ S.foods = S.foods.filter(d => d !== food); f.state = 'rest'; f.timer = 0; f.target = null; S.coins += 1; S.dirt = Math.min(100, S.dirt + 2); }
+      else if (f.sat >= 99.5){ f.state = 'rest'; f.timer = 0; f.target = null; S.coins += 1; say(f, '배불러'); }
+    }
+  } else if (g > 0.5){
+    // 그루밍: 커넥톰 발화가 0보다 크면 멈춰서 앞다리로 더듬이를 닦는다. 속도 ∝ 발화율
+    if (f.state !== 'groom'){ f.boutStart = f.dust; f.state = 'groom'; }
+    f.dust = Math.max(0, f.dust - CLEAN_K*g*dt);
+    if (f.dust > 0 && g > 10 && f.brushT === 0) discover('groom', `먼지 ${f.dust.toFixed(0)}% → 촉각털 ${fmt(bristle)}Hz → 그루밍 운동뉴런 ${fmt(g)}Hz`);
+    if (f.dust === 0 && (f.boutStart||0) >= 30) { discover('done', `먼지 ${f.boutStart.toFixed(0)}% → 0%, 입력 0Hz에서 멈춤`); f.boutStart = 0; }
+  } else {
+    if (f.state === 'groom') f.state = 'wander';
+    if (night && f.state !== 'leave'){ f.state = 'sleep'; f.target = null; }
+    else if (f.state === 'sleep'){ f.state = 'wander'; }
+    if (f.state === 'leave'){
+      f.timer += dt; walkTo(f, f.x + Math.sin(f.h), f.z + Math.cos(f.h), dt, 1.6*sp); if (f.timer > 1.1) f.state = 'wander';
+    } else if (f.state === 'rest'){
+      f.timer += dt; if (f.timer > 4) f.state = 'wander';
+    } else if (f.state === 'hop'){
+      f.timer += dt; const k = clamp(f.timer/f.hopDur, 0, 1);
+      f.x = lerp(f.hx0, f.hx1, k); f.z = lerp(f.hz0, f.hz1, k); f.y = Math.sin(k*Math.PI) * 1.6;
+      if (k >= 1){ f.y = 0; f.state = 'wander'; }
+    } else if (f.state !== 'sleep'){
+      // 배고프면(포만 80 미만) 가장 가까운 먹이로 간다 — 다가가기는 손으로 정한 규칙, 먹을지는 뇌가 정한다
+      const tgt = f.sat < 80 ? nearestFood(f) : null;
+      if (tgt){
+        const a = (i*1.9) % 6.28, tx = tgt.x + Math.sin(a)*.42, tz = tgt.z + Math.cos(a)*.42;
+        f.state = 'seek'; f.target = tgt.id; walkTo(f, tx, tz, dt, 1.7*sp);
+        if (Math.hypot(tx-f.x, tz-f.z) < .12){ f.state = 'taste'; f.timer = 0; }
+      } else {
+        f.state = 'wander'; f.target = null;
+        f.wt = (f.wt||0) - dt;
+        if (f.wt <= 0){ f.wt = 1.5 + Math.random()*3; f.wx = rnd(BOUND.x*.9); f.wz = rnd(BOUND.z*.9); f.pause = Math.random() < .45; }
+        if (!f.pause) walkTo(f, f.wx, f.wz, dt, .9*sp);
+        if (Math.random() < dt*.03 && !f.pause){ f.state = 'hop'; f.timer = 0; f.hopDur = 1.1; f.hx0 = f.x; f.hz0 = f.z;
+          f.hx1 = clamp(f.x + rnd(3), -BOUND.x, BOUND.x); f.hz1 = clamp(f.z + rnd(2), -BOUND.z, BOUND.z); f.h = Math.atan2(f.hx1-f.x, f.hz1-f.z); }
+      }
+    }
+  }
+  f.tb = tb; f.tin = tin;
+  // ---- 손으로 만든 몸 상태 ----
+  f.sat = Math.max(0, f.sat - dt * (night || f.state === 'sleep' ? .16 : .38));
+  // 꽃가루·먼지가 더듬이에 앉는다 (사육장이 지저분할수록, 데이지가 많을수록 자주)
+  const daisies = S.decos.filter(d => DECOS[d.kind].pollen).length;
+  if (Math.random() < dt * (.004 + S.dirt*.00025 + daisies*.004)) f.dust = Math.min(100, f.dust + 8 + Math.random()*14);
+  f.mood += (happinessTarget(f) - f.mood) * Math.min(1, dt*.03);
+}
+
+function checkTasteDiscovery(food, c, fm, tb, eat){
+  const m = `설탕 ${fmt(c.s)} · 쓴맛 ${fmt(c.b)} · 물 ${fmt(c.w)}Hz → 섭식 운동뉴런 ${fmt(fm)}Hz`;
+  if (food.kind === 'water'){ discover('water', `물 ${c.w}Hz → DNg67 ${fmt(avg2(tb,'DNg67'))}Hz, 섭식 운동뉴런 ${fmt(fm)}Hz`); return; }
+  if (eat && c.b === 0 && c.s >= 95) discover('sweet', m);
+  if (eat && c.b === 0 && c.s >= 84 && c.s <= 92) discover('edge', m);
+  if (!eat && c.b === 0 && c.s > 0 && c.s <= 80) discover('weak', m);
+  if (!eat && FRUIT[food.kind] && c.b > fruitBase(food)) discover('spoiled', m);
+  if (!eat && !FRUIT[food.kind] && c.s >= 95 && c.b > 30 && c.b <= 60) discover('bitterbit', m);
+  if (!eat && c.s === 0 && c.b > 0) discover('bitteronly', m);
+  if (eat && c.b > 0 && c.b < 30) discover('banana', m);
+}
+
+let lastHour = null;
+function simStep(dt){
+  const dayBefore = dayOf(S.t);
+  S.t += dt;
+  S.flies.forEach((f,i) => stepFly(f, i, dt));
+  // 과일이 상한다: 쓴맛 입력이 하루 spoil Hz씩 오른다 (손으로 정한 속도)
+  for (const d of S.foods){
+    const sp = FOODS[d.kind].spoil; if (sp) d.b = Math.min(100, d.b + sp*dt/DAY);
+    if (S.t - d.born > DAY*.8) S.dirt = Math.min(100, S.dirt + dt/DAY*6);
+  }
+  S.dirt = Math.min(100, S.dirt + dt/DAY*14);
+  const dn = dayOf(S.t);
+  if (dn !== dayBefore && dn > S.lastMorning){
+    S.lastMorning = dn;
+    const happy = S.flies.filter(f => f.mood >= 60).length, bonus = happy*3;
+    S.coins += bonus;
+    toast(`<b>${dn}일째 아침</b><br>기분 좋은 초파리 ${happy}마리 · <span class="drop"></span> +${bonus}`, '', 3800);
+  }
+}
+function advance(sec, h=0.05){ let n = Math.ceil(sec/h); while (n-- > 0) simStep(h); }
+
+/* ================= 플레이어 행동 ================= */
+function placeFood(kind, x, z, opt={}){
+  const F = FOODS[kind]; if (!F || !S.unlocked[kind]) return null;
+  if (S.foods.length >= MAX_FOOD){ toast('먹이는 한 번에 8개까지 놓을 수 있어요. 🧽 청소로 치워 주세요.'); return null; }
+  const s = kind === 'sugar' ? (opt.conc ?? S.conc) : F.s;
+  const d = {id:'d'+(S.uid++), kind, x:clamp(x,-BOUND.x,BOUND.x), z:clamp(z,-BOUND.z,BOUND.z), s, b:opt.b ?? F.b, w:F.w, amt:F.amt, born:S.t, rot:Math.random()*6.28};
+  S.foods.push(d); syncScene(); return d;
+}
+function placeDeco(kind, x, z){
+  if (!(S.inv[kind] > 0)) return null;
+  if (S.decos.length >= MAX_DECO){ toast('장식은 12개까지예요.'); return null; }
+  S.inv[kind]--; const d = {kind, x:clamp(x,-BOUND.x+.3,BOUND.x-.3), z:clamp(z,-BOUND.z+.3,BOUND.z-.3), rot:Math.random()*6.28};
+  S.decos.push(d); syncScene(); return d;
+}
+function careFly(f, tool){
+  if (tool === 'pollen'){ f.dust = Math.min(100, f.dust + 40); say(f, '에취! 꽃가루'); }
+  else if (tool === 'brush'){ f.brushT = 2.5; f.brushHz = S.brushHz; say(f, `붓질 <em>촉각털 ${S.brushHz}Hz</em>`); }
+  else if (tool === 'wind'){ f.windT = 2.5; say(f, '후— <em>JO-CE 100Hz</em>'); }
+}
+function cleanAt(x, z){
+  const food = S.foods.find(d => Math.hypot(d.x-x, d.z-z) < .6);
+  if (food){ S.foods = S.foods.filter(d => d !== food); S.flies.forEach(f => { if (f.target === food.id){ f.target = null; f.state = 'wander'; } }); syncScene(); return 'food'; }
+  const di = S.decos.findIndex(d => Math.hypot(d.x-x, d.z-z) < .8);
+  if (di >= 0){ const d = S.decos.splice(di,1)[0]; S.inv[d.kind] = (S.inv[d.kind]||0) + 1; syncScene(); return 'deco'; }
+  S.dirt = Math.max(0, S.dirt - 9); updateDirt(); return 'floor';
+}
+function buy(key){
+  const it = FOODS[key] || DECOS[key];
+  if (key === 'fly'){
+    const price = flyPrice(); if (S.coins < price || S.flies.length >= MAX_FLIES) return false;
+    S.coins -= price; const nf = newFlyState(S.flies.length, rnd(3), rnd(2)); nf.born = S.t; nf.name = NAMES[S.flies.length % NAMES.length];
+    S.flies.push(nf); S.sel = S.flies.length-1; syncScene(); toast(`<b>${nf.name}</b>이(가) 사육장에 왔어요`); return true;
+  }
+  if (!it || S.coins < it.price) return false;
+  if (FOODS[key]){ if (S.unlocked[key]) return false; S.unlocked[key] = 1; }
+  else S.inv[key] = (S.inv[key]||0) + 1;
+  S.coins -= it.price; return true;
+}
+const flyPrice = () => 20 + 10*(S.flies.length-1);
+
+/* ================= 저장 ================= */
+const SAVE_KEY = 'fruitfly-pet-v1';
+function serial(){
+  return JSON.stringify(Object.assign({}, S, {flies:S.flies.map(f => ({id:f.id, name:f.name, x:f.x, z:f.z, h:f.h, sat:f.sat, dust:f.dust, mood:f.mood, born:f.born, mem:f.mem}))}));
+}
+function save(){ try { localStorage.setItem(SAVE_KEY, serial()); return true; } catch(e){ return false; } }
+function hydrate(o){
+  const base = freshState();
+  const s = Object.assign(base, o);
+  s.flies = (o.flies||[]).map((f,i) => Object.assign(newFlyState(i, 0, 0), f, {state:'wander', timer:0, target:null, y:0}));
+  if (!s.flies.length) s.flies = base.flies;
+  return s;
+}
+function load(){
+  try { const raw = localStorage.getItem(SAVE_KEY); if (!raw) return false; S = hydrate(JSON.parse(raw)); return true; } catch(e){ return false; }
+}
+function resetGame(){ try { localStorage.removeItem(SAVE_KEY); } catch(e){} S = freshState(); syncScene(); renderTools(); refreshBadge(); }
+
+/* ================= 카메라·입력 ================= */
+let camYaw = -.25, camPitch = .82, camZoom = 1, W = 1, H = 1;
+function placeCam(){
+  const aspect = W/H, half = Math.tan(camera.fov*Math.PI/360);
+  const d = Math.max(13.2/(2*half*aspect), 9.5/(2*half)) * camZoom * 1.22;
+  const ty = .2;
+  camera.position.set(Math.sin(camYaw)*Math.cos(camPitch)*d, ty + Math.sin(camPitch)*d, Math.cos(camYaw)*Math.cos(camPitch)*d + .4);
+  camera.lookAt(0, ty, .4);
+}
+function resize(){
+  W = Math.max(1, stage.clientWidth); H = Math.max(1, stage.clientHeight);
+  renderer.setSize(W, H, false); camera.aspect = W/H; camera.updateProjectionMatrix(); placeCam();
+}
+new ResizeObserver(resize).observe(stage);
+const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
+function floorAt(cx, cy){
+  const r = renderer.domElement.getBoundingClientRect();
+  ray.setFromCamera({x:(cx-r.left)/r.width*2-1, y:-(cy-r.top)/r.height*2+1}, camera);
+  const p = new THREE.Vector3(); return ray.ray.intersectPlane(plane, p) ? p : null;
+}
+function screenOf(x, y, z){
+  const v = new THREE.Vector3(x, y, z).project(camera);
+  return {x:(v.x+1)/2*W, y:(1-v.y)/2*H, vis:v.z < 1};
+}
+function flyAtScreen(cx, cy){
+  const r = renderer.domElement.getBoundingClientRect(); let best = -1, bd = 34;
+  S.flies.forEach((f,i) => { const p = screenOf(f.x, f.y+.3, f.z), d = Math.hypot(p.x-(cx-r.left), p.y-(cy-r.top)); if (d < bd){ bd = d; best = i; } });
+  return best;
+}
+const ptrs = new Map(); let drag = null, pinch0 = 1, zoom0 = 1;
+const cv = renderer.domElement;
+cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (ptrs.size === 1) drag = {x:e.clientX, y:e.clientY, moved:false, yaw:camYaw, pitch:camPitch};
+  else { const [a,b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x-b.x, a.y-b.y) || 1; zoom0 = camZoom; if (drag) drag.moved = true; } });
+cv.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (ptrs.size >= 2){ const [a,b] = [...ptrs.values()]; camZoom = clamp(zoom0 * pinch0 / (Math.hypot(a.x-b.x, a.y-b.y) || 1), .55, 1.5); placeCam(); return; }
+  if (!drag) return; const dx = e.clientX-drag.x, dy = e.clientY-drag.y;
+  if (Math.hypot(dx,dy) > 8) drag.moved = true;
+  if (drag.moved){ camYaw = clamp(drag.yaw - dx*.006, -1.3, 1.3); camPitch = clamp(drag.pitch + dy*.004, .35, 1.35); placeCam(); } });
+const endPtr = e => { const had = ptrs.delete(e.pointerId); if (!had) return;
+  if (ptrs.size === 0 && drag){ if (!drag.moved) tapAt(e.clientX, e.clientY); drag = null; } };
+cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); drag = null; });
+cv.addEventListener('wheel', e => { e.preventDefault(); camZoom = clamp(camZoom * (1 + Math.sign(e.deltaY)*.08), .55, 1.5); placeCam(); }, {passive:false});
+
+function tapAt(cx, cy){
+  const tool = S.tool, fi = flyAtScreen(cx, cy);
+  const careTool = tool === 'pollen' || tool === 'brush' || tool === 'wind';
+  if (fi >= 0){ S.sel = fi; if (careTool) careFly(S.flies[fi], tool); renderFlyRow(); return; }
+  const p = floorAt(cx, cy); if (!p) return;
+  if (Math.abs(p.x) > BOUND.x+.4 || Math.abs(p.z) > BOUND.z+.4) return;
+  if (FOODS[tool]){ if (S.unlocked[tool]) placeFood(tool, p.x, p.z); }
+  else if (DECOS[tool]){ if (!placeDeco(tool, p.x, p.z)) toast(`${DECOS[tool].name}이(가) 없어요. 🛒 상점에서 살 수 있어요.`); }
+  else if (tool === 'clean'){ const r = cleanAt(p.x, p.z); if (r === 'floor') toast('바닥을 닦았어요', '', 1200); }
+  else if (careTool) toast('초파리를 눌러 주세요', '', 1400);
+  else if (tool === 'look'){ const d = S.foods.find(d => Math.hypot(d.x-p.x, d.z-p.z) < .6); if (d) toast(foodInfo(d), '', 3200); }
+  renderTools();
+}
+function foodInfo(d){
+  const F = FOODS[d.kind];
+  const tb = tasteBrain(d.s, d.b, d.w);
+  return `<b>${F.ic} ${F.name}</b> · 남은 양 ${Math.max(0,d.amt).toFixed(0)}<br>맛 입력: 설탕 ${fmt(d.s)} · 쓴맛 ${fmt(d.b)} · 물 ${fmt(d.w)}Hz${FRUIT[d.kind] && d.b > F.b + 1 ? ' (상하는 중)' : ''}`;
+}
+
+/* ================= UI ================= */
+const TOOLSETS = {
+  food: () => Object.keys(FOODS).map(k => ({key:k, ic:FOODS[k].ic, t:FOODS[k].name, lock:!S.unlocked[k]})),
+  care: () => [{key:'look', ic:'👆', t:'살펴보기'}, {key:'clean', ic:'🧽', t:'청소'}, {key:'pollen', ic:'🌼', t:'꽃가루'}, {key:'brush', ic:'🖌️', t:'붓질'}, {key:'wind', ic:'💨', t:'바람'}],
+  deco: () => Object.keys(DECOS).map(k => ({key:k, ic:DECOS[k].ic, t:DECOS[k].name, n:S.inv[k]||0, lock:!(S.inv[k] > 0)}))
+};
+function renderTools(){
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  const box = $('tools'); box.innerHTML = '';
+  TOOLSETS[S.tab]().forEach(t => {
+    const b = document.createElement('button'); b.className = 'tool' + (S.tool === t.key ? ' on' : '') + (t.lock ? ' lock' : '');
+    b.dataset.tool = t.key;
+    b.innerHTML = `<span class="ic">${t.ic}</span><span>${t.t}</span>${t.n != null ? `<span class="n">${t.n}</span>` : ''}${t.lock && S.tab==='food' ? '<span class="n">🔒</span>' : ''}`;
+    b.onclick = () => { if (t.lock && S.tab === 'food'){ openSheet('shop'); return; } S.tool = t.key; renderTools(); };
+    box.appendChild(b);
+  });
+  renderOpts();
+}
+function renderOpts(){
+  const o = $('opts'), t = S.tool;
+  if (t === 'sugar'){
+    o.innerHTML = `<div class="row"><span>농도</span><input type="range" id="conc" min="50" max="100" step="5" value="${S.conc}" aria-label="설탕물 농도"><output id="concO">${S.conc}%</output></div>
+      <div>바닥을 누르면 놓아요. 농도 ${S.conc}% → 설탕 감각 뉴런 ${S.conc}Hz (비례 가정)</div>`;
+    $('conc').oninput = e => { S.conc = +e.target.value; $('concO').textContent = S.conc + '%'; o.lastElementChild.textContent = `바닥을 누르면 놓아요. 농도 ${S.conc}% → 설탕 감각 뉴런 ${S.conc}Hz (비례 가정)`; };
+  } else if (FOODS[t]) o.innerHTML = `<div>${FOODS[t].desc}. 바닥을 누르면 놓아요. (${S.foods.length}/${MAX_FOOD})</div>`;
+  else if (t === 'brush'){
+    o.innerHTML = `<div class="row"><span>세기</span><span class="seg"><button data-hz="30" class="${S.brushHz===30?'on':''}">살살 30Hz</button><button data-hz="60" class="${S.brushHz===60?'on':''}">보통 60Hz</button><button data-hz="100" class="${S.brushHz===100?'on':''}">세게 100Hz</button></span></div>
+      <div>초파리를 누르면 더듬이 촉각털을 2.5초 쓸어요.</div>`;
+    o.querySelectorAll('[data-hz]').forEach(b => b.onclick = () => { S.brushHz = +b.dataset.hz; renderOpts(); });
+  }
+  else if (t === 'pollen') o.innerHTML = '<div>초파리를 누르면 더듬이에 꽃가루가 묻어요(먼지 +40%).</div>';
+  else if (t === 'wind') o.innerHTML = '<div>초파리를 누르면 바람으로 더듬이를 흔들어요. 존스턴 기관(JO-CE)을 2.5초 자극해요.</div>';
+  else if (t === 'clean') o.innerHTML = `<div>먹이·장식을 누르면 치우고, 바닥을 누르면 닦아요. 사육장 먼지 <b class="mono" id="dirtV">${S.dirt.toFixed(0)}%</b></div>`;
+  else if (t === 'look'){
+    o.innerHTML = `<div class="envrow"><span>온도</span><span class="seg"><button id="tDown" aria-label="온도 내리기">−</button><button disabled class="mono" id="tV">${S.temp}°C</button><button id="tUp" aria-label="온도 올리기">+</button></span>
+      <span class="pill">사육장 먼지 <span class="mono">${S.dirt.toFixed(0)}%</span></span></div><div>먹이를 누르면 맛 성분을 볼 수 있어요. 22~26°C가 편해요.</div>`;
+    $('tDown').onclick = () => { S.temp = Math.max(16, S.temp-1); renderOpts(); };
+    $('tUp').onclick = () => { S.temp = Math.min(32, S.temp+1); renderOpts(); };
+  } else if (DECOS[t]) o.innerHTML = `<div>${DECOS[t].desc}. 남은 개수 ${S.inv[t]||0}. 바닥을 누르면 놓아요.</div>`;
+  else o.innerHTML = '';
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  S.tab = b.dataset.tab; const first = TOOLSETS[S.tab]()[0];
+  if (!TOOLSETS[S.tab]().some(t => t.key === S.tool)) S.tool = S.tab === 'care' ? 'look' : (TOOLSETS[S.tab]().find(t => !t.lock) || first).key;
+  renderTools();
+});
+function renderFlyRow(){
+  $('flyrow').innerHTML = S.flies.map((f,i) => `<button class="flybtn${i===S.sel?' on':''}" data-i="${i}">${face(f.mood)} ${f.name}</button>`).join('');
+  $('flyrow').querySelectorAll('button').forEach(b => b.onclick = () => { S.sel = +b.dataset.i; renderFlyRow(); });
+}
+const face = m => m >= 70 ? '😊' : m >= 45 ? '🙂' : m >= 25 ? '😐' : '😣';
+const DOING = {wander:'돌아다니는 중', seek:'먹이로 걸어가는 중', taste:'발로 맛보는 중', eat:'주둥이를 뻗어 먹는 중', leave:'돌아서는 중',
+  groom:'앞다리로 더듬이를 닦는 중', sleep:'자는 중', rest:'쉬는 중', hop:'폴짝 나는 중'};
+function setBar(id, v, max){ $(id).style.width = clamp(v/max*100, 0, 100) + '%'; }
+function refreshBadge(){ const n = Object.keys(S.disc).filter(k => !S.seen[k]).length; $('newBadge').hidden = !n; $('newBadge').textContent = n; }
+let uiT = 0;
+function updateUI(){
+  const f = S.flies[S.sel] || S.flies[0];
+  $('coins').textContent = S.coins;
+  const h = hourOf(S.t); $('timel').textContent = `${String(Math.floor(h)).padStart(2,'0')}:${String(Math.floor((h%1)*6)*10).padStart(2,'0')}`;
+  $('dayl').textContent = `${dayOf(S.t)}일째 · ${isNight(S.t) ? '밤' : '낮'}`;
+  $('fName').textContent = f.name; $('fFace').textContent = face(f.mood);
+  $('fAge').textContent = `${Math.floor((S.t - f.born)/DAY)+1}일 된 초파리`;
+  setBar('bSat', f.sat, 100); $('vSat').textContent = f.sat.toFixed(0);
+  setBar('bCln', 100-f.dust, 100); $('vCln').textContent = (100-f.dust).toFixed(0);
+  setBar('bMood', f.mood, 100); $('vMood').textContent = f.mood.toFixed(0);
+  $('bSat').style.background = f.sat < 25 ? 'var(--eye)' : 'var(--moss)';
+  $('fDoing').textContent = DOING[f.state] || '';
+  const tb = f.tb || ZERO_T, fm = avg2(tb,'feedMN'), dng = avg2(tb,'DNg67'), g = f.g || 0;
+  setBar('bFeed', fm, 50); $('vFeed').textContent = fmt(fm); $('thFeed').style.left = (FEED_TH/50*100) + '%';
+  setBar('bDng', dng, 60); $('vDng').textContent = fmt(dng);
+  setBar('bGroom', g, 70); $('vGroom').textContent = fmt(g);
+  const ti = f.tin || {s:0,b:0,w:0}, gi = f.gIn || {bristle:0, jo:0};
+  $('inps').textContent = `입력 · 설탕 ${fmt(ti.s)} 쓴맛 ${fmt(ti.b)} 물 ${fmt(ti.w)} · 촉각털 ${fmt(gi.bristle)} JO ${fmt(gi.jo)}`;
+  const v = $('verdict');
+  if (f.state === 'taste'){ v.className = 'verdict'; v.textContent = `맛보는 중… 문턱 ${FEED_TH}Hz`; }
+  else if (f.state === 'eat'){ v.className = 'verdict yes'; v.textContent = `먹는다: ${fmt(fm)}Hz ≥ ${FEED_TH}Hz`; }
+  else if (f.state === 'groom'){ v.className = 'verdict yes'; v.textContent = `그루밍: CB0810 ${fmt(g)}Hz`; }
+  else { const last = [...S.log].reverse().find(l => l.fly === f.name);
+    if (last){ v.className = 'verdict ' + (last.eat ? 'yes' : 'no'); v.textContent = `최근: ${FOODS[last.kind].name} ${last.eat ? '먹음' : '거부'} (${fmt(last.fm)}Hz)`; }
+    else { v.className = 'verdict'; v.textContent = ''; } }
+  const dv = $('dirtV'); if (dv) dv.textContent = S.dirt.toFixed(0) + '%';
+  $('speedBtn').textContent = S.speed === 1 ? '▶ 1×' : '⏩ ' + S.speed + '×';
+}
+$('speedBtn').onclick = () => { S.speed = S.speed === 1 ? 3 : S.speed === 3 ? 8 : 1; updateUI(); };
+
+/* ================= 시트 ================= */
+function openSheet(kind){
+  const box = $('sheetBox'); $('sheet').hidden = false; sheetKind = kind;
+  const close = '<button class="x" data-close aria-label="닫기">✕</button>';
+  if (kind === 'journal'){
+    const got = DISC.filter(d => S.disc[d.id]).length;
+    const rows = Object.keys(FOODS).filter(k => S.tally[k]).map(k => `<tr><td>${FOODS[k].ic} ${FOODS[k].name}</td><td>${S.tally[k].eat}</td><td>${S.tally[k].rej}</td><td class="mono">${fmt(S.tally[k].last)}Hz</td></tr>`).join('');
+    box.innerHTML = `<div class="shd"><div><h2>관찰 일지</h2><div class="sub">초파리가 실제로 맛보고 닦을 때 커넥톰이 낸 값만 기록돼요.</div></div>${close}</div>
+      <div class="prog"><i style="width:${got/DISC.length*100}%"></i></div><div class="sub">발견 ${got} / ${DISC.length} · 발견마다 <span class="drop"></span> ${DISC_REWARD}</div>
+      ${DISC.map(d => S.disc[d.id] ? `<div class="disc got"><div class="t">${d.t}</div><div class="d">${d.d}</div><div class="m">${S.disc[d.id].day}일째 측정 · ${S.disc[d.id].m}</div></div>`
+        : `<div class="disc"><div class="t">???</div><div class="d sub">${d.hint}</div></div>`).join('')}
+      <h3>시식 기록</h3>${rows ? `<div class="tw"><table class="t"><tr><th>먹이</th><th>먹음</th><th>거부</th><th>마지막 섭식 운동뉴런</th></tr>${rows}</table></div>` : '<p class="sub">아직 맛본 먹이가 없어요.</p>'}`;
+    DISC.forEach(d => { if (S.disc[d.id]) S.seen[d.id] = 1; }); refreshBadge();
+  } else if (kind === 'shop'){
+    const card = (key, it, owned, label) => `<div class="item"><div class="t">${it.ic} ${it.name}</div><div class="d">${it.desc}</div>
+      <button class="buy" data-buy="${key}" ${owned || S.coins < it.price ? 'disabled' : ''}>${owned ? '있음' : `<span class="drop"></span> ${it.price} ${label}`}</button></div>`;
+    box.innerHTML = `<div class="shd"><div><h2>상점</h2><div class="sub">가진 꿀방울 <span class="drop"></span> <b class="mono">${S.coins}</b> · 발견, 다 먹은 끼니, 기분 좋은 아침마다 모여요.</div></div>${close}</div>
+      <h3>먹이 (한 번 사면 계속 놓을 수 있어요)</h3><div class="shop">${Object.keys(FOODS).filter(k => FOODS[k].price).map(k => card(k, FOODS[k], S.unlocked[k], '열기')).join('')}</div>
+      <h3>장식 (하나씩)</h3><div class="shop">${Object.keys(DECOS).map(k => card(k, DECOS[k], false, `사기 · ${S.inv[k]||0}개`)).join('')}</div>
+      <h3>식구</h3><div class="shop"><div class="item"><div class="t">🪰 새 초파리</div><div class="d">${S.flies.length >= MAX_FLIES ? '사육장이 꽉 찼어요 (최대 4마리).' : '같은 뇌 표를 쓰는 친구. 먹이를 두고 함께 맛봐요.'}</div>
+      <button class="buy" data-buy="fly" ${S.flies.length >= MAX_FLIES || S.coins < flyPrice() ? 'disabled' : ''}><span class="drop"></span> ${flyPrice()} 데려오기</button></div></div>`;
+    box.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (buy(b.dataset.buy)){ renderTools(); renderFlyRow(); openSheet('shop'); save(); } });
+  } else if (kind === 'help'){
+    box.innerHTML = `<div class="shd"><div><h2>어떻게 작동하나요</h2><div class="sub">뇌가 정하는 것과 게임이 정하는 것을 나눠 적었어요.</div></div>${close}</div>
+      <p>초파리 뇌 전체(FlyWire 783 커넥톰, 뉴런 138,639개)를 Shiu 외(2024)의 LIF 모델로 미리 시뮬레이션해 둔 반응표를 씁니다. 감각 뉴런 무리에 0·15·30·50·75·100Hz 입력을 넣고 300ms 뒤 판독 뉴런의 발화율을 기록한 표이고, 게임은 그 사이 값을 선형 보간합니다. 게임 안에서 뇌를 새로 돌리지는 않습니다.</p>
+      <h3>커넥톰이 정하는 것</h3>
+      <dl class="kv"><dt>먹을지</dt><dd>먹이의 설탕(${E.counts.sugar}개)·쓴맛(${E.counts.bitter}개)·물(${E.counts.water}개) 감각 뉴런 입력 → 섭식 운동뉴런(CB0871+CB0701) 양쪽 평균. 15Hz 이상이면 먹고 아니면 돌아섭니다.</dd>
+      <dt>먹는 중</dt><dd>먹는 동안에도 계속 확인해서, 과일이 상해 발화가 문턱 아래로 내려가면 그만둡니다.</dd>
+      <dt>그루밍</dt><dd>더듬이 촉각털(BM_Ant ${E.counts.antenna_bristle}개)·존스턴 기관(JO-CE ${E.counts.JO_CE}개) 입력 → 그루밍 운동뉴런(CB0810). 0보다 크면 멈춰서 닦고, 먼지가 줄어드는 속도는 발화율에 비례합니다.</dd>
+      <dt>뇌 패널</dt><dd>고른 초파리의 지금 입력과 판독 뉴런 발화율(좌우 평균)입니다.</dd></dl>
+      <h3>손으로 만든 것</h3>
+      <dl class="kv"><dt>감각 변환</dt><dd>농도 % = 입력 Hz(비례). 먼지는 「조금이라도 있으면 촉각털 최소 50Hz, 50+50×√먼지비율」. 이 가정이 없으면 촉각털 30Hz 이하에서 그루밍 운동뉴런이 0Hz라 먼지 약 9%가 남은 채 멈춥니다.</dd>
+      <dt>문턱·계수</dt><dd>먹기 문턱 15Hz, 먹는 속도(발화 1Hz당 포만 0.12/초), 먼지 제거(1Hz당 0.25%/초).</dd>
+      <dt>배고픔</dt><dd>모델에는 배고픔·목마름 같은 몸 상태가 없습니다. 포만이 80 미만일 때 먹이에 다가가는 것은 게임 규칙이고, 다가간 뒤 먹을지는 뇌가 정합니다.</dd>
+      <dt>나머지</dt><dd>걷기·날기·잠(밤), 과일이 상하는 속도(쓴맛 +30Hz/일), 포만·청결·기분, 온도·장식, 꽃가루가 붙는 빈도, 꿀방울과 상점.</dd></dl>
+      <h3>모델의 한계</h3>
+      <p class="sub">물은 DNg67을 켜지만 섭식 운동뉴런은 0Hz라 이 초파리는 물을 삼키지 않습니다. JO-CE만 자극하면 그루밍 운동뉴런이 0Hz인데, 실제 실험에서는 JO-CE가 그루밍을 일으킨다는 보고가 있어 300ms 모델과 이 판독 뉴런의 한계일 수 있습니다. 설탕·쓴맛 표와 물 표는 따로 계산돼서 설탕물의 「물」 성분은 넣지 않습니다.</p>
+      <p><a href="https://fruitfly.blueming.net/" target="_blank" rel="noopener">초파리 뇌 실험실에서 탈출·미로·3D 뇌 보기 ↗</a></p>
+      <h3>저장</h3><p class="sub">진행은 이 브라우저에 자동 저장됩니다. 창을 닫은 동안에는 시간이 흐르지 않아요.</p>
+      <p><button class="ghost" id="resetBtn">처음부터 다시</button> <span class="sub" id="resetQ"></span></p>`;
+    $('resetBtn').onclick = () => { const q = $('resetQ');
+      if (q.dataset.ok){ resetGame(); closeSheet(); toast('새 사육장을 시작했어요'); } else { q.dataset.ok = 1; q.textContent = '한 번 더 누르면 모든 진행이 지워져요.'; } };
+  } else if (kind === 'intro'){
+    box.innerHTML = `<h2>초파리 키우기</h2>
+      <p>유리 사육장에 초파리 <b>초롱</b>이가 살아요. 먹이를 놓고, 더듬이를 살피고, 사육장을 꾸며 주세요.</p>
+      <p>먹을지 말지, 언제 더듬이를 닦을지는 <b>초파리 뇌 전체 배선도(커넥톰)</b>로 미리 계산한 반응이 정해요. 묽은 설탕물을 외면하거나 쓴맛 한 방울에 돌아서는 것도 모두 그 뇌의 반응이에요.</p>
+      <p class="sub">처음엔 진한 설탕물과 묽은 설탕물을 나란히 놓아 보세요. 무엇을 알게 되든 📖 관찰 일지에 쌓여요.</p>
+      <div class="prow"><button class="big" data-close id="startBtn">${S.intro ? '이어서 하기' : '사육장 열기'}</button><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로</a></div>
+      <p class="sub">${S.intro ? `${dayOf(S.t)}일째 사육장이 저장돼 있어요. ` : ''}Esc나 P로 언제든 일시정지할 수 있어요.</p>`;
+  }
+  box.querySelectorAll('[data-close]').forEach(b => b.onclick = closeSheet);
+}
+let sheetKind = null;
+function closeSheet(){ if (sheetKind === 'intro') S.intro = true; $('sheet').hidden = true; sheetKind = null; save(); }
+$('sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+function setPause(on){
+  if (on && sheetKind === 'intro') return;          // 처음 화면에서는 이미 멈춰 있다
+  userPaused = on; $('pauseOv').hidden = !on; $('restartQ').textContent = ''; delete $('restartBtn').dataset.ok;
+  if (on){ if (!$('sheet').hidden) closeSheet(); save(); $('resumeBtn').focus(); }
+}
+$('pauseBtn').onclick = () => setPause(true);
+$('resumeBtn').onclick = () => setPause(false);
+$('restartBtn').onclick = () => { const b = $('restartBtn');
+  if (!b.dataset.ok){ b.dataset.ok = 1; $('restartQ').textContent = '저장된 사육장이 지워져요. 한 번 더 누르면 처음부터 시작해요.'; return; }
+  setPause(false); resetGame(); openSheet('intro'); };
+$('menuBtn').onclick = () => { setPause(false); openSheet('intro'); };
+document.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+  if (e.key === 'Escape' && !$('sheet').hidden && sheetKind !== 'intro'){ closeSheet(); return; }
+  if (e.key === 'Escape' || e.key === 'p' || e.key === 'P'){ e.preventDefault(); setPause($('pauseOv').hidden); }
+});
+$('journalBtn').onclick = () => openSheet('journal');
+$('shopBtn').onclick = () => openSheet('shop');
+$('helpBtn').onclick = () => openSheet('help');
+
+/* ================= 그리기 ================= */
+const _c = new THREE.Color();
+function draw(dt){
+  const k = daylight(S.t);
+  scene.background.copy(NIGHTBG).lerp(DAYBG, k);
+  hemi.intensity = .28 + .6*k; sun.intensity = .1 + .62*k; moonL.intensity = (1-k)*.55;
+  S.flies.forEach((f, i) => {
+    const v = view.flies.get(f.id); if (!v) return;
+    const u = v.mesh.userData;
+    v.mesh.position.set(f.x, f.y, f.z); v.mesh.rotation.y = f.h;
+    const air = f.state === 'hop';
+    if (air){ v.flap += dt*60; u.wl.rotation.z = Math.sin(v.flap)*.9; u.wr.rotation.z = -Math.sin(v.flap)*.9; }
+    else { const fold = f.state === 'sleep' ? .02 : .15; u.wl.rotation.z = fold; u.wr.rotation.z = -fold; }
+    v.mesh.position.y = f.y + (f.state === 'sleep' ? -.05 : 0);
+    // 다리 걷기
+    const moving = f.state === 'seek' || f.state === 'leave' || (f.state === 'wander' && !f.pause);
+    v.phase += dt * (moving ? 14 : 0);
+    u.legs.forEach((l, j) => l.rotation.x = moving ? Math.sin(v.phase + j*1.6)*.5 : 0);
+    // 앞다리 그루밍 (빠르기 ∝ 그루밍 운동뉴런 발화)
+    const g = f.g || 0, grooming = f.state === 'groom';
+    if (grooming) v.gph = (v.gph||0) + dt*(2 + g*.12)*Math.PI;
+    u.front.forEach((p, j) => { const want = grooming ? -2.05 + .35*Math.sin((v.gph||0) + j*Math.PI) : 0;
+      p.rotation.x += (want - p.rotation.x) * clamp(dt*8, 0, 1); p.rotation.z = (j ? 1 : -1) * (grooming ? .15 : .5); });
+    // 주둥이
+    const ext = f.state === 'eat' ? .85 + .15*Math.sin(performance.now()/90) : f.state === 'taste' ? .4 : .25;
+    u.pb.scale.y += (ext - u.pb.scale.y) * clamp(dt*10, 0, 1); u.pb.rotation.x = f.state === 'eat' ? -.15 : -.35;
+    const show = Math.ceil(f.dust/100*u.motes.length); u.motes.forEach((m, j) => m.visible = j < show);
+    // 이름표
+    const p = screenOf(f.x, f.y + .95, f.z);
+    v.tag.style.left = p.x + 'px'; v.tag.style.top = p.y + 'px';
+    v.tag.classList.toggle('sel', i === S.sel);
+    const nm = v.tag.lastChild, icon = f.state === 'sleep' ? ' 💤' : f.state === 'groom' ? ' 🧼' : f.state === 'eat' ? ' 🍽️' : f.state === 'taste' ? ' 👅' : '';
+    const label = f.name + icon; if (nm.textContent !== label) nm.textContent = label;
+    v.sayT -= dt;
+    const sayEl = v.tag.firstChild;
+    if (v.dirty){ sayEl.outerHTML = v.sayHTML; v.dirty = false; }
+    v.tag.firstChild.hidden = v.sayT <= 0;
+  });
+  const sf = S.flies[S.sel]; if (sf){ ring.position.set(sf.x, .03 + sf.y*.0, sf.z); ring.visible = true; }
+  // 먹이 크기·상함
+  for (const d of S.foods){
+    const m = view.foods.get(d.id); if (!m) continue;
+    const F = FOODS[d.kind], sc = .55 + .45*clamp(d.amt/F.amt, 0, 1); m.scale.set(sc, sc, sc);
+    if (F.spoil){
+      const rot = clamp((d.b - F.b)/45, 0, 1);
+      m.userData.parts.forEach((p, j) => p.material.color.copy(m.userData.base[j]).lerp(_c.set(0x5b4630), rot*.8));
+      m.userData.mold.visible = d.b - F.b >= 22;
+    }
+  }
+  renderer.render(scene, camera);
+}
+
+/* ================= 루프 ================= */
+let last = performance.now(), saveT = 0, paused = false, userPaused = false;
+const simFrozen = () => paused || userPaused || sheetKind === 'intro';
+function frame(now){
+  const rdt = Math.min(.1, (now - last)/1000); last = now;
+  if (!simFrozen()){
+    let simdt = rdt * S.speed;
+    while (simdt > 1e-6){ const h = Math.min(.05, simdt); simStep(h); simdt -= h; }
+  }
+  draw(rdt);
+  uiT -= rdt; if (uiT <= 0){ updateUI(); uiT = .12; }
+  saveT += rdt; if (saveT > 4){ saveT = 0; save(); }
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+addEventListener('pagehide', save);
+
+/* ================= 시작 ================= */
+function boot(snap){
+  if (snap && snap.state) S = hydrate(snap.state);
+  else if (!load()) S = freshState();
+  syncScene(); renderTools(); renderFlyRow(); refreshBadge(); resize(); updateUI();
+  if (!S.intro) openSheet('intro');
+  requestAnimationFrame(t => { last = t; frame(t); });
+}
+try { window.claude?.hot?.snapshot?.(() => ({state: JSON.parse(serial())})); } catch(e){}
+const hot = window.claude?.hot;
+if (hot?.ready) hot.ready(boot); else boot(hot?.data ?? null);
+
+/* 헤드리스 확인용 */
+window.__game = {
+  get S(){ return S; }, E, FOODS, DISC, FEED_TH, CLEAN_K, DAY,
+  advance, simStep, placeFood, placeDeco, careFly, cleanAt, buy, save, load:() => { const ok = load(); if (ok){ syncScene(); renderTools(); renderFlyRow(); refreshBadge(); } return ok; },
+  reset: resetGame, tasteBrain, interp2, interp1, dustToHz,
+  decide(s, b, w=0){ const tb = tasteBrain(s, b, w), fm = avg2(tb,'feedMN'); return {fm, dng:avg2(tb,'DNg67'), eat:fm >= FEED_TH}; },
+  pause(v){ paused = v; }, setPause, get frozen(){ return simFrozen(); }, sync:syncScene, ui:() => { renderTools(); renderFlyRow(); updateUI(); }, openSheet, closeSheet,
+  setTool(tab, tool){ S.tab = tab; S.tool = tool; renderTools(); }, tapAt, screenOf
+};
+</script>
