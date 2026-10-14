@@ -1,0 +1,28 @@
+"""Stage definitions for 신경 해커. Every outcome shown in the game is a lookup into
+results computed by run_stages.py with the whole-brain LIF; nothing is interpolated."""
+STAGES = [
+ dict(id='s1', scen='loom', mode='sil', K=1, goal='noescape',
+      cands=['DNp01', 'DNp04', 'PVLP011', 'PVLP069', 'DNp70', 'LC4', 'AVLP016', 'CL001']),
+ dict(id='s3', scen='sugar', mode='sil', K=1, goal='noeat',
+      cands=['CB0553', 'DNge059', 'CB0824', 'DNge080', 'CB0616', 'DNge031', 'CB0480', 'CB0419']),
+ dict(id='s6', scen='none', mode='act', K=1, goal='escape',
+      cands=['PVLP122b', 'DNp70', 'AVLP498', 'AVLP396', 'AVLP442', 'PVLP069', 'DNpe042', 'AVLP573', 'PVLP021']),
+ dict(id='s7', scen='none', mode='act', K=1, goal='eat',
+      cands=['CB0553', 'DNge080', 'CB0542', 'CB0277', 'CB0824', 'DNge042', 'CB0855', 'CB0616', 'CB0480']),
+ dict(id='s8', scen='none', mode='act', K=1, goal='groom',
+      cands=['CB0305', 'DNg84', 'CB3885', 'DNg15', 'CB0065', 'DNg35', 'CB3876']),
+ dict(id='s4', scen='sb', mode='sil', K=2, goal='eat',
+      cands=['CB0480', 'DNge031', 'CB0219', 'CB0248', 'CB0419', 'CB0088', 'CB0473', 'CB0499']),
+ dict(id='s12', scen='sugar', mode='sil', K=1, goal='feast',
+      cands=['DNge031', 'CB0480', 'DNg90', 'CB0896', 'CB0465', 'CB0030', 'CB0419', 'CB0473']),
+ dict(id='s11', scen='loom', mode='sil', K=2, goal='strong',
+      cands=['PVLP011', 'PVLP010', 'CL001', 'DNp04', 'LHAD1g1', 'PVLP024', 'PVLP130', 'CB0563']),
+ dict(id='s2', scen='loom', mode='sil', K=2, goal='noescape',
+      cands=['LPLC2', 'LC4', 'PVLP069', 'DNp70', 'PVLP122b', 'AVLP016', 'DNp04', 'PVLP011', 'AVLP498']),
+ dict(id='s5', scen='ant', mode='act', K=1, goal='nogroom',
+      cands=['CB0545', 'DNg93', 'DNg74_b', 'DNg108', 'CB0369', 'AN_GNG_132', 'CB0305', 'DNge148', 'CB0496']),
+ dict(id='s9', scen='loom', mode='sil', K=2, goal='oneside',
+      cands=['LPLC2@left', 'LC4@left', 'LPLC2@right', 'LC4@right', 'PVLP011', 'PVLP122b', 'AVLP016']),
+ dict(id='s10', scen='sugarloom', mode='sil', K=2, goal='eat_noescape',
+      cands=['DNp01', 'LPLC2', 'LC4', 'CB0553', 'DNge031', 'PVLP069', 'DNp04', 'CB0480']),
+]
