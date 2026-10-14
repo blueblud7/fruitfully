@@ -14,6 +14,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Preten
 #view canvas{display:block;width:100%;height:100%}
 #tabs{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
 #tabs button{background:rgba(20,22,28,.82);color:#fff;border:1px solid #ffffff22;padding:8px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+#tabs a.game{background:#ffcf4a;color:#1b1406;border-radius:999px;padding:8px 14px;font-size:14px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center}
 #tabs button.on{background:var(--accent);color:#0b1a10;font-weight:700;border-color:transparent}
 #hud{position:absolute;left:12px;bottom:12px;background:rgba(20,22,28,.82);color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;max-width:min(460px,calc(100% - 24px));z-index:2}
 #flash{position:absolute;inset:0;pointer-events:none;border:0 solid var(--warn);transition:border-width .15s}
@@ -47,7 +48,7 @@ table.t tr.cur td{color:var(--accent);font-weight:700}
 #labels span{position:absolute;transform:translate(-50%,-130%);font-size:11px;white-space:nowrap;background:rgba(10,12,18,.78);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid #ffffff30}
 #labels span.side{background:none;border:0;color:#9fb3d9;font-weight:700;font-size:12px}
 @media (max-width:760px){#wrap{flex-direction:column}#view{height:58vh;flex:none}#side{width:auto;border-left:0;border-top:1px solid var(--line);flex:1;padding:12px 16px}#hud{font-size:12px}
-  #tabs{top:8px;left:8px;right:8px;gap:4px}#tabs button{padding:6px 9px;font-size:12px}#tabs .ex{display:none}}
+  #tabs{top:8px;left:8px;right:8px;gap:4px}#tabs button{padding:6px 9px;font-size:12px}#tabs a.game{padding:6px 9px;font-size:12px}#tabs .ex{display:none}}
 </style>
 <div id="wrap">
   <div id="view">
@@ -59,6 +60,7 @@ table.t tr.cur td{color:var(--accent);font-weight:700}
       <button data-m="groom">⑤ 그루밍</button>
       <button data-m="gene">⑥ 유전자 조작</button>
       <button data-m="brain3d">⑦ 3D 뇌</button>
+      <a class="game" href="https://fruitfly.blueming.net/swatter/" target="_blank" rel="noopener">🪰 파리채 게임 ↗</a>
     </div>
     <div id="labels"></div>
     <div id="hud"></div>
