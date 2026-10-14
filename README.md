@@ -6,7 +6,9 @@ FlyWire 커넥톰(783판, 뉴런 138,639개, 연결 15,091,983쌍) 전체를 LIF
 - `sim/lif.py`: Shiu 외 2024(philshiu/Drosophila_brain_model) 방정식과 파라미터를 numpy 이벤트 구동으로 다시 구현한 시뮬레이터
 - `sim/validate.py`, `sim/lateral.py`: 회로 검증 (루밍 → 거대섬유, 좌우 자극 → 하강 뉴런)
 - `sim/build_tables.py`, `sim/build_odor.py`: 전체 뇌 반응표 생성 → `brain_tables.json`
-- `app.html` + `build.py` → `index.html` (반응표를 넣어 빌드)
+- `app.html` + `build.py` → `index.html` (아티팩트용, CDN three r128) + `local.html` (오프라인, `vendor/` 사용)
+  - `brain_tables.json`(루밍·빛·냄새)과 `brain_extra.json`(맛·물·그루밍·뉴런 차단·3D 파동)을 넣는다.
+    `brain_extra`는 발화율 0.1Hz 반올림, 위치는 FlyWire 복셀(4×4×40nm)에서 z×10 후 정수로 양자화해 줄임 (940KB → index.html 전체 약 0.7MB)
 - 데이터: `Connectivity_783.parquet`, `Completeness_783.csv` (philshiu/Drosophila_brain_model), 세포 유형 주석 (flyconnectome/flywire_annotations)
 
 ## 검증 결과 (전체 뇌, 300ms)
@@ -25,13 +27,42 @@ FlyWire 커넥톰(783판, 뉴런 138,639개, 연결 15,091,983쌍) 전체를 LIF
 - 미로(초파리 8마리, 240초, 미로 3개): 뇌 켬 18/24 도착 vs 뇌 끔 10/24
 - 주광성(30마리, 60초): 등 근처 비율 뇌 켬 50%, 뇌 끔 3%, 불 끔 3%
 
+## 새 실험 (④~⑦, `brain_extra.json`: 전체 커넥톰 LIF, 300ms 정상상태, 입력 0/15/30/50/75/100Hz)
+| 탭 | 커넥톰이 정하는 것 | 손으로 정한 것 |
+|---|---|---|
+| ④ 먹이 | 설탕(32개)·쓴맛(42개)·물(30개) 감각 뉴런 입력 → 섭식 운동뉴런(CB0871+CB0701) 발화. **15Hz 이상이면 먹음** | 걷기, 농도→Hz(비례), 문턱 15Hz, 주둥이 동작 |
+| ⑤ 그루밍 | 더듬이 촉각털(BM_Ant 41개) 또는 JO-CE(433개) 입력 → 그루밍 운동뉴런(CB0810) 발화. 다리 속도·먼지 제거 속도 ∝ 발화 | 먼지→Hz(먼지 있으면 최소 50Hz, 50+50√비율), 제거 계수 0.25%/초/Hz, 다리 동작 |
+| ⑥ 유전자 조작 | GF·DNp04·LPLC2·LC4를 침묵시킨 루밍 반응표로 교체 | 탈출 문턱 45Hz, 몸 모델(①과 같음) |
+| ⑦ 3D 뇌 | 자극별 뉴런마다 첫 발화 시각(150ms)과 발화 수 | 150ms→6초 재생, 밝기 표현 |
+
+### 결과 (헤드리스, `flytest2/exp.js`)
+- 먹이(종류별 3방울, 설탕 100 · 쓴맛 80 · 물 100Hz): 설탕물 3/3 먹음, 쓴 먹이 0/3, 설탕+쓴맛 0/3, 물 0/3.
+  섭식 운동뉴런: 설탕 100Hz → 36Hz, 75Hz → 5Hz, 50Hz → 1Hz(설탕 50이면 2/2 거부). 설탕 100 + 쓴맛 30 → 15Hz, 쓴맛 50 이상 → 약 1Hz. 물 100Hz → 0Hz (DNg67은 55Hz)
+- 그루밍(먼지 80%): 촉각털 → 그루밍 운동뉴런 최대 57Hz, 7.3초 만에 먼지 0%. JO-CE → 0Hz, 먼지 80% 그대로
+  - 먼지에 비례해 발화한다고 두면 촉각털 30Hz 이하에서 CB0810이 0Hz라 먼지 약 9%가 남은 채 멈춘다 → 최소 50Hz 가정을 둠
+- 뉴런 차단(조건마다 옆·위·느린 물체 각 10회):
+
+  | 차단 | 탈출 | 탈출 거리(블록) | 느린 물체 | GF@100Hz 입력 |
+  |---|---|---|---|---|
+  | 없음 | 100% | 2.9 | 10/10 | 162Hz |
+  | 거대섬유(GF) | 0% | — | 0/10 | 0Hz |
+  | DNp04 | 100% | 3.7 (더 일찍) | 10/10 | 197Hz |
+  | LPLC2 | 83~92% | 2.0 (더 늦게) | 7/10 | 52Hz |
+  | LC4 | 100% | 3.0 | 10/10 | 143Hz |
+
+  DNp04를 끄면 거대섬유가 오히려 세짐 — DNp04 경로가 거대섬유를 일부 억제하는 것으로 보임 (이 모델 기준)
+- 3D 뇌: 반응 뉴런 루밍 781개(자극 314), 설탕 242개(32), 더듬이 150개(41), 왼쪽 빛 1,591개(897).
+  첫 발화: DNp04 7.5ms, 거대섬유 8.2ms / 그루밍 운동뉴런 24.8ms / 섭식 운동뉴런 46.7ms
+- 기존 실험 재확인: 탈출 옆·위·느린 15/15, 차단 시 15/15 맞음. 미로(3개, 240초) 뇌 켬 24/24 vs 끔 16/24. 주광성(4회 평균) 뇌 켬 38%, 뇌 끔 7%, 불 끔 10% (회차마다 27~50% 사이로 흔들림)
+
 ## 손으로 만든 부분
 감각 변환(루밍 각속도, 눈별 빛 세기, 냄새 적응·로그 변환), 몸 모델(점프·보행·회전 방향), 냄새 확산, 미로의 「세지면 직진, 약해지면 방향 전환」 규칙.
 
 ## 사이트
-https://fruitfly.blueming.net (GitHub Pages)
+- 실험실: https://fruitfly.blueming.net
+- 파리채 게임: https://fruitfly.blueming.net/swatter/
 
 ## 데이터 출처
-- 연결 데이터: [philshiu/Drosophila_brain_model](https://github.com/philshiu/Drosophila_brain_model) (`Connectivity_783.parquet`, `Completeness_783.csv`)
+- 연결 데이터: [philshiu/Drosophila_brain_model](https://github.com/philshiu/Drosophila_brain_model)
 - 세포 유형 주석: [flyconnectome/flywire_annotations](https://github.com/flyconnectome/flywire_annotations)
 - FlyWire: Dorkenwald et al. 2024, Schlegel et al. 2024 (Nature). 모델: Shiu et al. 2024 (Nature)
