@@ -1,0 +1,838 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>커넥톰 파리채</title>
+<style>
+:root{
+  --bg:#12100e; --ink:#fbf6ee; --dim:#c9bfae; --panel:rgba(22,19,16,.84); --panel-solid:#1d1a16;
+  --line:rgba(255,255,255,.14); --accent:#ffcf4a; --accent-ink:#2a1f00; --good:#7bd88f; --warn:#ff6b4a;
+  --l:#5aa9ff; --r:#ffb454; --gf:#ff6b4a;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){ --bg:#efe7da; }
+}
+:root[data-theme="light"]{ --bg:#efe7da; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+#app{position:relative;width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none}
+#view{position:absolute;inset:0}
+#view canvas{display:block;width:100%;height:100%;touch-action:none}
+#app.playing #view canvas{cursor:none}
+button{font:inherit;cursor:pointer}
+
+/* 상단 바 */
+#top{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:6px;align-items:center;pointer-events:none;z-index:3}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip small{display:block;font-size:10px;color:var(--dim);letter-spacing:.02em}
+.chip b{font-size:17px}
+#combo b{color:var(--accent)}
+#time.low b{color:var(--warn)}
+#top .sp{flex:1}
+#muteBtn{pointer-events:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;min-width:44px;min-height:40px}
+
+/* 뇌 패널 */
+#brain{position:absolute;left:10px;bottom:10px;width:min(300px,calc(100% - 20px));background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:10px 12px 9px;z-index:3;pointer-events:none;font-size:12px}
+#brain .hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+#brain .hd strong{font-size:13px}
+#brain .hd span{color:var(--dim);font-size:11px}
+.brow{display:grid;grid-template-columns:62px 1fr 1fr;gap:5px;align-items:center;margin:4px 0}
+.brow.one{grid-template-columns:62px 1fr 46px}
+.brow label{color:var(--dim);font-size:11px}
+.bar{position:relative;height:9px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:5px}
+.bar.l i{background:var(--l)} .bar.r i{background:var(--r)} .bar.gf i{background:var(--good)}
+.bar.gf{height:12px;overflow:visible}
+.bar.gf .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;border-radius:1px}
+.gfv{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+#bstate{color:var(--dim);font-size:11px;margin-top:5px;min-height:14px}
+#gfFlash{position:absolute;left:50%;top:-14px;transform:translate(-50%,0) scale(.8);background:var(--warn);color:#fff;font-weight:800;
+  padding:4px 12px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .15s,transform .15s;white-space:nowrap}
+#gfFlash.on{opacity:1;transform:translate(-50%,0) scale(1)}
+
+/* 힌트 */
+#hint{position:absolute;right:10px;bottom:10px;max-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:8px 11px;font-size:12px;color:var(--dim);line-height:1.5;z-index:3;pointer-events:none}
+@media (max-width:640px){ #hint{display:none} }
+
+/* 효과 */
+#fx{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:20px;color:#fff;
+  text-shadow:0 2px 0 #000a,0 0 10px #0008;white-space:nowrap}
+.pop.esc{color:#ffd0c4;font-size:15px}
+.pop.miss{color:#ddd;font-size:15px}
+#banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);text-align:center;z-index:5;pointer-events:none;
+  opacity:0;transition:opacity .25s}
+#banner.on{opacity:1}
+#banner h2{font-size:clamp(28px,7vw,46px);font-weight:900;text-shadow:0 3px 0 #000a}
+#banner p{margin-top:6px;font-size:14px;background:var(--panel);display:inline-block;padding:6px 12px;border-radius:999px}
+
+/* 오버레이 */
+.ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;
+  background:rgba(10,8,6,.55);backdrop-filter:blur(3px)}
+.ov[hidden]{display:none}
+.card{width:100%;max-width:520px;max-height:100%;overflow:auto;background:var(--panel-solid);border:1px solid var(--line);
+  border-radius:18px;padding:22px 20px;box-shadow:0 20px 60px #0008}
+.card h1{font-size:26px;font-weight:900;letter-spacing:-.01em}
+.card h1 em{font-style:normal;color:var(--accent)}
+.card .lead{margin-top:8px;color:var(--dim);font-size:14px;line-height:1.6}
+.how{margin-top:14px;display:grid;gap:8px}
+.how div{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5}
+.how kbd{flex:none;min-width:78px;text-align:center;background:#ffffff14;border:1px solid var(--line);border-radius:8px;padding:2px 6px;font:inherit;font-size:12px;font-weight:700}
+details{margin-top:14px;background:#ffffff0a;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+details summary{cursor:pointer;font-size:13px;font-weight:700}
+details p{margin-top:8px;font-size:12.5px;line-height:1.65;color:var(--dim)}
+details p b{color:var(--ink)}
+.row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.big{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:13px 22px;font-size:16px;font-weight:900;min-height:48px}
+.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14px;min-height:48px}
+.best{color:var(--dim);font-size:13px}
+.best b{color:var(--ink)}
+.res{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.res div{background:#ffffff0d;border-radius:10px;padding:8px;text-align:center;font-size:11px;color:var(--dim)}
+.res b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+@media (max-width:480px){
+  .chip{padding:5px 7px;font-size:12px}.chip b{font-size:15px}.chip small{font-size:9px}
+  #brain{padding:8px 10px 7px}
+  .brow,.brow.one{grid-template-columns:54px 1fr 1fr}.brow.one{grid-template-columns:54px 1fr 42px}
+  .card{padding:18px 16px}.card h1{font-size:22px}
+}
+</style>
+<div id="app">
+  <div id="view"></div>
+  <div id="fx"></div>
+  <div id="top">
+    <div class="chip"><small>레벨</small><b id="lvTxt">1</b>/5</div>
+    <div class="chip"><small>점수</small><b id="scTxt">0</b></div>
+    <div class="chip" id="time"><small>남은 시간</small><b id="tmTxt">45</b>초</div>
+    <div class="chip"><small>잡은 수</small><b id="qTxt">0/3</b></div>
+    <div class="chip" id="combo"><small>콤보</small><b id="cbTxt">×1</b></div>
+    <div class="sp"></div>
+    <button id="muteBtn" aria-label="소리 켜기/끄기">소리 켬</button>
+  </div>
+  <div id="brain" aria-live="off">
+    <div id="gfFlash">거대섬유 발화!</div>
+    <div class="hd"><strong>노린 파리의 뇌</strong><span id="bgain">경계 ×1.0</span></div>
+    <div class="brow"><label>루밍 입력</label><div class="bar l"><i id="bInL"></i></div><div class="bar r"><i id="bInR"></i></div></div>
+    <div class="brow one"><label>거대섬유</label><div class="bar gf"><i id="bGF"></i><span class="th" id="bTh"></span></div><span class="gfv" id="bGFv">0 Hz</span></div>
+    <div class="brow"><label>DNp04</label><div class="bar l"><i id="bP4L"></i></div><div class="bar r"><i id="bP4R"></i></div></div>
+    <div id="bstate">파리를 찾는 중…</div>
+  </div>
+  <div id="hint">누르고 있으면 파리채가 <b>천천히</b> 내려가고, 떼면 내려칩니다. 거대섬유 막대가 흰 선을 넘으면 파리는 도망칩니다.</div>
+  <div id="banner"><h2 id="bnT"></h2><p id="bnP"></p></div>
+
+  <div class="ov" id="startOv">
+    <div class="card">
+      <h1>커넥톰 <em>파리채</em></h1>
+      <p class="lead">이 파리들은 진짜 초파리 뇌 배선도로 생각합니다. 파리채가 다가오는 모습이 파리 눈에서 <b>얼마나 빨리 커지는지</b>가 뇌로 들어가고, 탈출 명령 뉴런(거대섬유)이 문턱을 넘으면 도망칩니다.</p>
+      <div class="how">
+        <div><kbd>움직이기</kbd><span>마우스(또는 손가락)로 파리채를 겨눕니다. 너무 빨리 휘두르면 그것도 들킵니다.</span></div>
+        <div><kbd>누르고 있기</kbd><span>파리채가 천천히 내려갑니다. 천천히 커지는 물체에 파리는 둔합니다.</span></div>
+        <div><kbd>떼기</kbd><span>내려칩니다. 가까이서 칠수록 피할 시간이 없습니다.</span></div>
+      </div>
+      <details>
+        <summary>어떻게 작동하나요? (정직한 설명)</summary>
+        <p id="metaLine"></p>
+        <p><b>뇌가 정하는 것:</b> 파리채의 겉보기 크기 θ = 2·atan(r/d)가 커지는 속도(dθ/dt)를 루밍 감지 뉴런(LPLC2·LC4) 입력 0~100Hz로 바꿔 왼눈·오른눈에 나눠 넣습니다(위에서 오면 양쪽 모두). 미리 계산한 전뇌 반응표를 보간해 거대섬유(DNp01) 평균 발화율이 <b>45Hz를 넘는 순간에만</b> 탈출합니다. 어느 쪽으로 뛸지는 위협 쪽에서 켜지는 DNp04의 좌우 차이로 정합니다. 이 모델에서 빠른 물체는 약 3.1블록, 느린 물체는 약 1.5블록에서야 탈출을 일으켰습니다. 이 게임의 파리채(경계심 ×1.0)로 재 보면 초당 1블록으로 내릴 때 약 1.8블록, 초당 4블록이면 약 3.6블록 거리에서 탈출이 켜집니다. 그래서 천천히 다가가는 전략이 실제로 통합니다.</p>
+        <p><b>손으로 만든 것:</b> 걷기·털 고르기·비행·점프 같은 몸 동작, dθ/dt를 Hz로 바꾸는 변환과 30ms 평활, 점프 준비 시간(40~110ms), 레벨별 「경계심」(감각 이득만 0.8~1.6배로 조정, 뇌 출력은 건드리지 않음), 털 고르는 중의 감각 이득 0.7배. 반응표는 300ms 정상상태 발화율이라 밀리초 단위 신경 지연은 반영되지 않습니다.</p>
+      </details>
+      <div class="row"><button class="big" id="startBtn">게임 시작</button><span class="best">최고 점수 <b id="bestTxt">0</b></span></div>
+    </div>
+  </div>
+
+  <div class="ov" id="overOv" hidden>
+    <div class="card">
+      <h1 id="ovTitle">시간 종료</h1>
+      <p class="lead" id="ovLead"></p>
+      <div class="res">
+        <div><b id="rScore">0</b>점수</div>
+        <div><b id="rKills">0</b>잡은 파리</div>
+        <div><b id="rEsc">0</b>거대섬유 탈출</div>
+        <div><b id="rAcc">0%</b>명중률</div>
+        <div><b id="rCombo">0</b>최고 콤보</div>
+        <div><b id="rBest">0</b>최고 점수</div>
+      </div>
+      <div class="row"><button class="big" id="againBtn">다시 하기</button><button class="ghost" id="menuBtn">처음 화면</button></div>
+    </div>
+  </div>
+</div>
+<script src="vendor/three.min.js"></script>
+<script>
+'use strict';
+const T = {"levels2d":[0,15,30,50,75,100],"loom":{"0,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,15":{"DNp01_L":10.0,"DNp01_R":16.666666666666668,"DNp04_L":0.0,"DNp04_R":56.66666666666667,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,30":{"DNp01_L":20.0,"DNp01_R":40.0,"DNp04_L":0.0,"DNp04_R":103.33333333333334,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.666666666666667,"DNb05_R":3.3333333333333335,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,50":{"DNp01_L":33.333333333333336,"DNp01_R":70.0,"DNp04_L":0.0,"DNp04_R":143.33333333333334,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":13.333333333333334,"DNb05_R":3.3333333333333335,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.3333333333333335,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":3.3333333333333335,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,75":{"DNp01_L":80.0,"DNp01_R":120.0,"DNp04_L":0.0,"DNp04_R":183.33333333333334,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":30.0,"DNb05_R":23.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.333333333333334,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":23.333333333333336,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,100":{"DNp01_L":96.66666666666667,"DNp01_R":160.0,"DNp04_L":0.0,"DNp04_R":213.33333333333334,"DNp07_L":0.0,"DNp07_R":6.666666666666667,"DNb05_L":30.0,"DNb05_R":36.66666666666667,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":26.666666666666668,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":36.66666666666667,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":80.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,15":{"DNp01_L":10.0,"DNp01_R":33.333333333333336,"DNp04_L":73.33333333333334,"DNp04_R":46.66666666666667,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,30":{"DNp01_L":30.0,"DNp01_R":43.333333333333336,"DNp04_L":63.333333333333336,"DNp04_R":96.66666666666667,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.666666666666667,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,50":{"DNp01_L":50.0,"DNp01_R":80.0,"DNp04_L":56.66666666666667,"DNp04_R":136.66666666666669,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":23.333333333333336,"DNb05_R":10.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,75":{"DNp01_L":73.33333333333334,"DNp01_R":123.33333333333334,"DNp04_L":46.66666666666667,"DNp04_R":180.0,"DNp07_L":0.0,"DNp07_R":3.3333333333333335,"DNb05_L":30.0,"DNb05_R":23.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.333333333333334,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":20.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,100":{"DNp01_L":100.0,"DNp01_R":166.66666666666669,"DNp04_L":43.333333333333336,"DNp04_R":216.66666666666669,"DNp07_L":0.0,"DNp07_R":3.3333333333333335,"DNb05_L":33.333333333333336,"DNb05_R":33.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":23.333333333333336,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":33.333333333333336,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,0":{"DNp01_L":23.333333333333336,"DNp01_R":23.333333333333336,"DNp04_L":123.33333333333334,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":3.3333333333333335,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,15":{"DNp01_L":16.666666666666668,"DNp01_R":56.66666666666667,"DNp04_L":120.0,"DNp04_R":33.333333333333336,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,30":{"DNp01_L":33.333333333333336,"DNp01_R":70.0,"DNp04_L":120.0,"DNp04_R":83.33333333333334,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":13.333333333333334,"DNb05_R":6.666666666666667,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,50":{"DNp01_L":43.333333333333336,"DNp01_R":83.33333333333334,"DNp04_L":106.66666666666667,"DNp04_R":130.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":20.0,"DNb05_R":16.666666666666668,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.3333333333333335,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,75":{"DNp01_L":66.66666666666667,"DNp01_R":136.66666666666669,"DNp04_L":106.66666666666667,"DNp04_R":173.33333333333334,"DNp07_L":0.0,"DNp07_R":6.666666666666667,"DNb05_L":30.0,"DNb05_R":26.666666666666668,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.333333333333334,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":10.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,100":{"DNp01_L":116.66666666666667,"DNp01_R":166.66666666666669,"DNp04_L":100.0,"DNp04_R":210.0,"DNp07_L":0.0,"DNp07_R":10.0,"DNb05_L":26.666666666666668,"DNb05_R":40.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":23.333333333333336,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":30.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,0":{"DNp01_L":43.333333333333336,"DNp01_R":56.66666666666667,"DNp04_L":173.33333333333334,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":10.0,"DNb05_R":6.666666666666667,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":10.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":10.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,15":{"DNp01_L":40.0,"DNp01_R":83.33333333333334,"DNp04_L":170.0,"DNp04_R":10.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.666666666666667,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":6.666666666666667,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":6.666666666666667,"DNg56_L":0.0,"DNg56_R":0.0},"50,30":{"DNp01_L":46.66666666666667,"DNp01_R":103.33333333333334,"DNp04_L":170.0,"DNp04_R":66.66666666666667,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":16.666666666666668,"DNb05_R":6.666666666666667,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":3.3333333333333335,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":6.666666666666667,"DNg56_L":0.0,"DNg56_R":0.0},"50,50":{"DNp01_L":50.0,"DNp01_R":106.66666666666667,"DNp04_L":166.66666666666669,"DNp04_R":116.66666666666667,"DNp07_L":0.0,"DNp07_R":10.0,"DNb05_L":23.333333333333336,"DNb05_R":16.666666666666668,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.3333333333333335,"DNa02_R":3.3333333333333335,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,75":{"DNp01_L":70.0,"DNp01_R":136.66666666666669,"DNp04_L":156.66666666666669,"DNp04_R":166.66666666666669,"DNp07_L":0.0,"DNp07_R":16.666666666666668,"DNb05_L":36.66666666666667,"DNb05_R":30.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.3333333333333335,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,100":{"DNp01_L":93.33333333333334,"DNp01_R":170.0,"DNp04_L":160.0,"DNp04_R":196.66666666666669,"DNp07_L":0.0,"DNp07_R":20.0,"DNb05_L":36.66666666666667,"DNb05_R":33.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":26.666666666666668,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":13.333333333333334,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"75,0":{"DNp01_L":96.66666666666667,"DNp01_R":103.33333333333334,"DNp04_L":213.33333333333334,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":26.666666666666668,"DNb05_R":23.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.666666666666668,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":23.333333333333336,"DNg56_L":0.0,"DNg56_R":0.0},"75,15":{"DNp01_L":96.66666666666667,"DNp01_R":120.0,"DNp04_L":213.33333333333334,"DNp04_R":3.3333333333333335,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":23.333333333333336,"DNb05_R":26.666666666666668,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.666666666666668,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":23.333333333333336,"DNg56_L":0.0,"DNg56_R":0.0},"75,30":{"DNp01_L":103.33333333333334,"DNp01_R":123.33333333333334,"DNp04_L":206.66666666666669,"DNp04_R":50.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":23.333333333333336,"DNb05_R":20.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":13.333333333333334,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":20.0,"DNg56_L":0.0,"DNg56_R":0.0},"75,50":{"DNp01_L":96.66666666666667,"DNp01_R":123.33333333333334,"DNp04_L":210.0,"DNp04_R":106.66666666666667,"DNp07_L":0.0,"DNp07_R":10.0,"DNb05_L":30.0,"DNb05_R":23.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":10.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":10.0,"DNg56_L":0.0,"DNg56_R":0.0},"75,75":{"DNp01_L":110.0,"DNp01_R":133.33333333333334,"DNp04_L":203.33333333333334,"DNp04_R":156.66666666666669,"DNp07_L":0.0,"DNp07_R":23.333333333333336,"DNb05_L":40.0,"DNb05_R":26.666666666666668,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":6.666666666666667,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":3.3333333333333335,"DNg56_L":0.0,"DNg56_R":0.0},"75,100":{"DNp01_L":120.0,"DNp01_R":180.0,"DNp04_L":203.33333333333334,"DNp04_R":196.66666666666669,"DNp07_L":0.0,"DNp07_R":26.666666666666668,"DNb05_L":33.333333333333336,"DNb05_R":30.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.333333333333334,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":3.3333333333333335,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"100,0":{"DNp01_L":133.33333333333334,"DNp01_R":113.33333333333334,"DNp04_L":246.66666666666669,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":30.0,"DNb05_R":23.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.666666666666668,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":33.333333333333336,"DNg56_L":0.0,"DNg56_R":0.0},"100,15":{"DNp01_L":120.0,"DNp01_R":126.66666666666667,"DNp04_L":243.33333333333334,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":30.0,"DNb05_R":30.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":20.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":33.333333333333336,"DNg56_L":0.0,"DNg56_R":0.0},"100,30":{"DNp01_L":130.0,"DNp01_R":140.0,"DNp04_L":243.33333333333334,"DNp04_R":40.0,"DNp07_L":0.0,"DNp07_R":3.3333333333333335,"DNb05_L":30.0,"DNb05_R":26.666666666666668,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":23.333333333333336,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":30.0,"DNg56_L":0.0,"DNg56_R":0.0},"100,50":{"DNp01_L":130.0,"DNp01_R":136.66666666666669,"DNp04_L":236.66666666666669,"DNp04_R":96.66666666666667,"DNp07_L":0.0,"DNp07_R":13.333333333333334,"DNb05_L":36.66666666666667,"DNb05_R":33.333333333333336,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.666666666666668,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":30.0,"DNg56_L":0.0,"DNg56_R":0.0},"100,75":{"DNp01_L":140.0,"DNp01_R":150.0,"DNp04_L":236.66666666666669,"DNp04_R":153.33333333333334,"DNp07_L":0.0,"DNp07_R":23.333333333333336,"DNb05_L":23.333333333333336,"DNb05_R":36.66666666666667,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":6.666666666666667,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":16.666666666666668,"DNg56_L":0.0,"DNg56_R":0.0},"100,100":{"DNp01_L":143.33333333333334,"DNp01_R":180.0,"DNp04_L":233.33333333333334,"DNp04_R":186.66666666666669,"DNp07_L":0.0,"DNp07_R":26.666666666666668,"DNb05_L":33.333333333333336,"DNb05_R":40.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.3333333333333335,"DNa02_R":3.3333333333333335,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":10.0,"DNg56_L":0.0,"DNg56_R":0.0}},"meta":{"connectome":"FlyWire 783 (philshiu/Drosophila_brain_model)","neurons":138639,"synapse_rows":15091983,"model":"LIF, Shiu et al. 2024 params","sim_ms":300,"inputs":{"loom":"LPLC2+LC4 per side","light":"Tm3 (ON pathway) per side","odor":"ORN DM1/DM4/DM2/VM2/VA2 both sides; uniform rate per ORN (Hz) = level, mean of 8 Poisson seeds; browser maps path distance to 0.4-1.6 Hz (adapted, log transduction)"}}};
+
+/* ================= 커넥톰 반응표 보간 ================= */
+const READ = ['DNp01_L','DNp01_R','DNp04_L','DNp04_R'];
+function seg(levels, x){
+  x = Math.max(levels[0], Math.min(levels[levels.length-1], x));
+  let i = 0; while (i < levels.length-2 && levels[i+1] <= x) i++;
+  return [i, (x-levels[i])/(levels[i+1]-levels[i])];
+}
+function brain2(l, r){
+  const L = T.levels2d, [i,fi] = seg(L,l), [j,fj] = seg(L,r), tb = T.loom;
+  const a = tb[L[i]+','+L[j]], b = tb[L[i+1]+','+L[j]], c = tb[L[i]+','+L[j+1]], d = tb[L[i+1]+','+L[j+1]];
+  const o = {}; for (const k of READ) o[k] = a[k]*(1-fi)*(1-fj) + b[k]*fi*(1-fj) + c[k]*(1-fi)*fj + d[k]*fi*fj;
+  return o;
+}
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+const rand = (a,b) => a + Math.random()*(b-a);
+const $ = id => document.getElementById(id);
+const leftv = h => [Math.cos(h), -Math.sin(h)];   // 파리는 +z를 h만큼 돌린 방향을 봄
+
+/* ================= 게임 상수 ================= */
+const GF_TH = 45;            // 거대섬유 탈출 문턱 (Hz)
+const SW_HALF = 0.75;        // 파리채 머리 반폭 (블록)
+const SW_R = 0.75;           // 겉보기 크기 계산용 반지름
+const HOVER_Y = 7.6;         // 들어 올린 높이 (절대 y)
+const LOWER_V = 1.0;         // 누르고 있을 때 내려가는 속도 (블록/초)
+const STRIKE_V = 26;         // 내려치는 속도
+const MOVE_V = 9;            // 수평 이동 최대 속도
+const GROOM_GAIN = 0.7;      // 털 고르는 중 감각 이득 (손으로 정함)
+const LEVELS = [
+  {n:1, flies:1, quota:3, time:45, gain:0.8, walk:0.45, wander:[9,15]},
+  {n:2, flies:2, quota:4, time:45, gain:1.0, walk:0.55, wander:[8,13]},
+  {n:3, flies:2, quota:5, time:45, gain:1.2, walk:0.65, wander:[7,12]},
+  {n:4, flies:3, quota:6, time:45, gain:1.4, walk:0.75, wander:[6,11]},
+  {n:5, flies:4, quota:8, time:50, gain:1.6, walk:0.85, wander:[5,10]},
+];
+
+/* ================= 렌더 기본 ================= */
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xd9c7a8);
+scene.fog = new THREE.Fog(0xd9c7a8, 32, 70);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+scene.add(new THREE.HemisphereLight(0xfff6e6, 0x6b5a48, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 0.65); sun.position.set(-8, 20, 12); scene.add(sun);
+
+function pixTex(base, noise, seed, pattern){
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d'); let s = seed;
+  const r = () => (s = (s*16807) % 2147483647) / 2147483647;
+  for (let y=0;y<16;y++) for (let x=0;x<16;x++){
+    let k = 1 + (r()-0.5)*noise;
+    if (pattern==='plank' && (y%4===0)) k *= .82;
+    if (pattern==='tile' && (x===0||y===0)) k *= .78;
+    if (pattern==='mesh' && (x%3===0||y%3===0)) k *= .7;
+    if (pattern==='melon') k *= (y<3 ? .35 : y<5 ? 1.6 : 1);
+    g.fillStyle = `rgb(${clamp(base[0]*k,0,255)|0},${clamp(base[1]*k,0,255)|0},${clamp(base[2]*k,0,255)|0})`;
+    g.fillRect(x,y,1,1);
+  }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; return t;
+}
+const lam = (base, noise, seed, pat) => new THREE.MeshLambertMaterial({map: pixTex(base, noise, seed, pat)});
+const MAT = {
+  tileA: lam([226,220,206],.12,3,'tile'), tileB: lam([98,120,140],.15,5,'tile'),
+  wall: lam([236,214,170],.12,7), plank: lam([170,122,74],.22,11,'plank'), dplank: lam([120,82,50],.22,13,'plank'),
+  stone: lam([150,150,156],.25,17), cab: lam([88,128,112],.18,19,'plank'), glass: new THREE.MeshLambertMaterial({color:0x8fc4ea, emissive:0x2a4a66}),
+  plate: lam([248,248,244],.06,23), melon: lam([228,66,70],.25,29,'melon'), cup: lam([70,140,210],.2,31), dark: lam([60,58,64],.3,37),
+  bread: lam([214,160,90],.25,41), frame: lam([240,240,236],.08,43)
+};
+const BOX = new THREE.BoxGeometry(1,1,1);
+function blocks(list, mat){
+  const m = new THREE.InstancedMesh(BOX, mat, list.length), o = new THREE.Object3D();
+  list.forEach((p,i)=>{ o.position.set(p[0]+.5,p[1]+.5,p[2]+.5); o.updateMatrix(); m.setMatrixAt(i,o.matrix); });
+  scene.add(m); return m;
+}
+function box(w,h,d,mat,x,y,z){ const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); m.position.set(x,y,z); scene.add(m); return m; }
+
+/* --- 부엌 --- */
+(function buildKitchen(){
+  const A=[], B=[];
+  for (let x=-16;x<16;x++) for (let z=-8;z<14;z++) ((x+z)&1 ? A : B).push([x,-1,z]);
+  blocks(A, MAT.tileA); blocks(B, MAT.tileB);
+  const W=[], G=[], F=[];
+  for (let x=-16;x<16;x++) for (let y=0;y<14;y++){
+    const win = x>=-4 && x<4 && y>=7 && y<12, fr = x>=-5 && x<5 && y>=6 && y<13 && !win;
+    (win ? G : fr ? F : W).push([x,y,-8]);
+  }
+  blocks(W, MAT.wall); blocks(G, MAT.glass); blocks(F, MAT.frame);
+  const LW=[]; for (let z=-8;z<10;z++) for (let y=0;y<14;y++) LW.push([-17,y,z]); blocks(LW, MAT.wall);
+  // 조리대: 윗면 y=4
+  const C=[], S=[];
+  for (let x=-12;x<12;x++) for (let z=-7;z<-5;z++){ for (let y=0;y<3;y++) C.push([x,y,z]); S.push([x,3,z]); }
+  blocks(C, MAT.cab); blocks(S, MAT.stone);
+  box(1.6,1.2,1.2,MAT.dark,-8.5,4.6,-6.4); box(.5,.25,.5,MAT.stone,-8.5,5.35,-6.4);       // 주전자
+  box(1.2,1.6,.9,MAT.cup,8,4.8,-6.5);                                                  // 통
+  // 식탁: 윗면 y=3
+  const TT=[]; for (let x=-5;x<5;x++) for (let z=-3;z<3;z++) TT.push([x,2,z]); blocks(TT, MAT.plank);
+  const L=[]; for (const [x,z] of [[-5,-3],[4,-3],[-5,2],[4,2]]) for (let y=0;y<2;y++) L.push([x,y,z]); blocks(L, MAT.dplank);
+  box(2,.15,2,MAT.plate,-1.2,3.075,-.2);                     // 접시 (윗면 3.15)
+  box(1,1,1,MAT.melon,2.5,3.5,.5);                           // 수박 블록 (윗면 4)
+  box(.6,.9,.6,MAT.cup,3.3,3.45,-2.1);                       // 컵 (장식)
+  box(.9,.35,.6,MAT.bread,-1.2,3.325,-.2);                   // 접시 위 빵 (장식)
+  // 의자
+  const CH=[]; for (const x of [-2,1]) { CH.push([x,0,4],[x,1,4],[x,1,5],[x,2,5],[x,3,5]); } blocks(CH, MAT.dplank);
+})();
+
+/* 파리가 앉을 수 있는 면 */
+const SURF = [
+  {id:'table',  x0:-5,  x1:5,   z0:-3,  z1:3,   y:3,    w:3},
+  {id:'plate',  x0:-2.2,x1:-0.2,z0:-1.2,z1:0.8, y:3.15, w:4},
+  {id:'melon',  x0:2,   x1:3,   z0:0,   z1:1,   y:4,    w:1.2},
+  {id:'counter',x0:-6.5,x1:6.5, z0:-7,  z1:-5,  y:4,    w:1.8},   // 폰 화면에서도 보이는 구간만
+];
+const BLOCKERS = [ {x0:-1.65,x1:-.75,z0:-.5,z1:.1}, {x0:3,x1:3.6,z0:-2.4,z1:-1.8}, {x0:-8.8,x1:-7.2,z0:-7,z1:-5.8}, {x0:7.4,x1:8.6,z0:-7,z1:-6} ];
+const FLOOR = {id:'floor', y:0};
+function surfaceAt(x,z){
+  let best = FLOOR;
+  for (const s of SURF) if (x>=s.x0 && x<s.x1 && z>=s.z0 && z<s.z1 && s.y > best.y) best = s;
+  return best;
+}
+function blocked(x,z){ return BLOCKERS.some(b => x>b.x0-.1 && x<b.x1+.1 && z>b.z0-.1 && z<b.z1+.1); }
+function baseUnder(x,z){
+  let y = 0; const h = SW_HALF*.9;
+  for (const [ox,oz] of [[0,0],[h,h],[h,-h],[-h,h],[-h,-h]]) y = Math.max(y, surfaceAt(x+ox,z+oz).y);
+  return y;
+}
+const pickPlanes = SURF.map(s => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(s.x1-s.x0, s.z1-s.z0), new THREE.MeshBasicMaterial({visible:false}));
+  m.rotation.x = -Math.PI/2; m.position.set((s.x0+s.x1)/2, s.y+.001, (s.z0+s.z1)/2); scene.add(m); return m;
+});
+const floorPick = new THREE.Mesh(new THREE.PlaneGeometry(80,80), new THREE.MeshBasicMaterial({visible:false}));
+floorPick.rotation.x = -Math.PI/2; scene.add(floorPick); pickPlanes.push(floorPick);
+
+/* ================= 파리채 ================= */
+const swat = new THREE.Group();
+const swHead = new THREE.Group(); swat.add(swHead);
+(function(){
+  const mesh = new THREE.MeshLambertMaterial({map: pixTex([220,60,60],.15,51,'mesh'), transparent:true, opacity:.93});
+  const rim = new THREE.MeshLambertMaterial({color:0xb02a2a});
+  const hd = new THREE.Mesh(new THREE.BoxGeometry(SW_HALF*2,.08,SW_HALF*2), mesh); hd.position.y = .04; swHead.add(hd);
+  for (const [w,d,x,z] of [[1.6,.1,0,.75],[1.6,.1,0,-.75],[.1,1.6,.75,0],[.1,1.6,-.75,0]]){
+    const r = new THREE.Mesh(new THREE.BoxGeometry(w,.12,d), rim); r.position.set(x,.06,z); swHead.add(r);
+  }
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(.14,.14,3.4), new THREE.MeshLambertMaterial({color:0xe9e2d0}));
+  handle.position.set(0,.9,2.3); handle.rotation.x = -.55; swat.add(handle);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(.2,.2,1), new THREE.MeshLambertMaterial({color:0x3a3a44}));
+  grip.position.set(0,1.75,3.8); grip.rotation.x = -.55; swat.add(grip);
+})();
+scene.add(swat);
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(SW_HALF*2, SW_HALF*2), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.25, depthWrite:false}));
+shadow.rotation.x = -Math.PI/2; scene.add(shadow);
+const ring = new THREE.Mesh(new THREE.RingGeometry(.32,.42,24), new THREE.MeshBasicMaterial({color:0x7bd88f, transparent:true, opacity:.85, depthWrite:false, side:THREE.DoubleSide}));
+ring.rotation.x = -Math.PI/2; scene.add(ring);
+
+const sw = {x:0, z:0, y:HOVER_Y, base:3, mode:'hover', t:0, strikeH:0};
+const aim = {x:0, z:0};
+const inp = {down:false, pressed:false, released:false};
+
+/* ================= 초파리 ================= */
+const FLY_S = 0.55;
+const FM = {
+  body: new THREE.MeshLambertMaterial({color:0x8a6a3a}), dark: new THREE.MeshLambertMaterial({color:0x34261a}),
+  eye: new THREE.MeshLambertMaterial({color:0xd8281f, emissive:0x400000}),
+  wing: new THREE.MeshLambertMaterial({color:0xe8f1ff, transparent:true, opacity:.55, side:THREE.DoubleSide}),
+  dead: new THREE.MeshLambertMaterial({color:0x2a1d14}), splat: new THREE.MeshBasicMaterial({color:0x5a3d22, transparent:true, opacity:.55, depthWrite:false})
+};
+const FG = {
+  thorax: new THREE.BoxGeometry(.5,.45,.6), head: new THREE.BoxGeometry(.42,.36,.3), eye: new THREE.BoxGeometry(.16,.24,.2),
+  wing: new THREE.BoxGeometry(.5,.02,.75), leg: new THREE.BoxGeometry(.05,.3,.05),
+  abd: [0,1,2].map(i => new THREE.BoxGeometry(.46-i*.08,.38-i*.06,.18)), splat: new THREE.CircleGeometry(.32, 10)
+};
+function makeFly(){
+  const g = new THREE.Group();
+  const add = (geo, mat, x,y,z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); g.add(m); return m; };
+  add(FG.thorax, FM.body, 0,.45,0);
+  for (let i=0;i<3;i++) add(FG.abd[i], i%2?FM.dark:FM.body, 0,.42,-.38-i*.17);
+  add(FG.head, FM.body, 0,.5,.42);
+  add(FG.eye, FM.eye, -.2,.55,.45); add(FG.eye, FM.eye, .2,.55,.45);
+  const wl = add(FG.wing, FM.wing, -.32,.7,-.25), wr = add(FG.wing, FM.wing, .32,.7,-.25);
+  const legs = [];
+  for (const sx of [-1,1]) for (let i=0;i<3;i++){ const l = add(FG.leg, FM.dark, sx*.28,.18,.2-i*.2); l.rotation.z = sx*.5; legs.push(l); }
+  g.scale.setScalar(FLY_S);
+  g.userData = {wl, wr, legs};
+  return g;
+}
+let flies = [], flyId = 0;
+function pickSpot(avoid){
+  let best = null, bestD = -1;
+  for (let k=0;k<30;k++){
+    let r = Math.random()*SURF.reduce((a,s)=>a+s.w,0), s = SURF[0];
+    for (const q of SURF){ if ((r -= q.w) <= 0){ s = q; break; } }
+    const x = rand(s.x0+.35, s.x1-.35), z = rand(s.z0+.35, s.z1-.35);
+    if (surfaceAt(x,z) !== s || blocked(x,z)) continue;
+    const d = avoid ? Math.hypot(x-avoid.x, z-avoid.z) : 99;
+    if (d > 3.5) return {x, z, s};
+    if (d > bestD){ bestD = d; best = {x, z, s}; }
+  }
+  return best || {x:0, z:1.5, s:SURF[0]};
+}
+function newFly(opts={}){
+  const f = {id:++flyId, mesh:makeFly(), state:'idle', t:0, dur:.5, x:0, y:3, z:0, h:rand(0,6.28), s:SURF[0],
+    vx:0, vy:0, vz:0, th:null, inL:0, inR:0, b:brain2(0,0), gf:0, d:99, flap:0, wanderT:rand(...G.lv.wander), turn:0};
+  scene.add(f.mesh);
+  if (opts.at){ f.x = opts.at.x; f.z = opts.at.z; f.s = surfaceAt(f.x,f.z); f.y = f.s.y; if (opts.h != null) f.h = opts.h; }
+  else {
+    const side = Math.random();
+    const p0 = side < .4 ? {x:rand(-3.5,3.5), y:9.5, z:-7.6} : side < .7 ? {x:-15, y:rand(5,8), z:rand(-6,5)} : {x:15, y:rand(5,8), z:rand(-6,5)};
+    f.x = p0.x; f.y = p0.y; f.z = p0.z;
+    beginFlight(f, pickSpot(sw));
+  }
+  flies.push(f); drawFly(f, 0); return f;
+}
+function beginFlight(f, spot){
+  f.state = 'fly'; f.ft = 0; f.th = null;
+  f.p0 = {x:f.x, y:f.y, z:f.z}; f.p1 = {x:spot.x, y:spot.s.y, z:spot.z}; f.dest = spot.s;
+  const dist = Math.hypot(f.p1.x-f.p0.x, f.p1.y-f.p0.y, f.p1.z-f.p0.z);
+  f.pc = {x:(f.p0.x+f.p1.x)/2 + rand(-2,2), y:Math.max(f.p0.y, f.p1.y) + rand(1.5,3.5), z:(f.p0.z+f.p1.z)/2 + rand(-2,2)};
+  f.fdur = dist/5 + .4;
+}
+function setState(f, st, dur){ f.state = st; f.t = 0; f.dur = dur; }
+
+/* --- 감각 → 뇌 --- */
+function sense(f, dt){
+  const dx = sw.x-f.x, dy = sw.y-(f.y+.12), dz = sw.z-f.z, d = Math.hypot(dx,dy,dz);
+  const th = 2*Math.atan(SW_R/Math.max(d,.05));
+  const dth = f.th==null ? 0 : (th-f.th)/dt; f.th = th;
+  const lv = leftv(f.h), hd = Math.hypot(dx,dz);
+  const lat = hd > 1e-3 ? (dx*lv[0]+dz*lv[1])/hd : 0;               // +1 왼쪽, -1 오른쪽
+  const top = Math.abs(dy)/Math.max(d,1e-3);                         // 위에서 오면 양쪽 눈
+  const wl = clamp(.5+lat*.8,0,1)*(1-top)+top, wr = clamp(.5-lat*.8,0,1)*(1-top)+top;
+  const gain = G.lv.gain * (f.state==='groom' ? GROOM_GAIN : 1);     // 레벨 경계심 = 감각 이득만
+  const drive = clamp(dth*60*gain, 0, 100);
+  const a = 1-Math.exp(-dt/0.03);
+  f.inL += (drive*wl - f.inL)*a; f.inR += (drive*wr - f.inR)*a;
+  f.b = brain2(f.inL, f.inR);
+  f.gf = (f.b.DNp01_L + f.b.DNp01_R)/2; f.d = d; f.dth = dth;
+  if (f.gf > f.gfPeak || f.gfPeak == null) f.gfPeak = f.gf;
+  return f.gf > GF_TH;
+}
+function triggerEscape(f){
+  const side = f.b.DNp04_L - f.b.DNp04_R;                            // >0: 위협이 왼쪽
+  f.latDir = side > 2 ? -1 : side < -2 ? 1 : (Math.random()<.5?-1:1);
+  f.escGF = f.gf; f.escH = sw.y - f.y; f.escSide = side;
+  setState(f, 'crouch', rand(.04,.11));                              // 점프 준비 (손으로 정한 값)
+  G.stats.escapes++; G.events.push({type:'escape', id:f.id, gf:f.gf, h:f.escH, t:G.t});
+  if (f === G.target || G.lab) flashGF();
+  if (!G.lab){ popText(f.x, f.y+.6, f.z, '거대섬유 발화!', 'esc'); sfx.zip(); }
+}
+function doJump(f){
+  const lv = leftv(f.h); let ax = f.x-sw.x, az = f.z-sw.z; const n = Math.hypot(ax,az);
+  if (n > .05){ ax/=n; az/=n; } else { ax = 0; az = 0; }
+  let hx = ax*.6 + lv[0]*f.latDir*.8, hz = az*.6 + lv[1]*f.latDir*.8; const m = Math.hypot(hx,hz)||1;
+  f.vx = hx/m*5; f.vz = hz/m*5; f.vy = 6; f.h = Math.atan2(f.vx, f.vz);
+  setState(f, 'jump', .3);
+}
+
+function updateFly(f, dt){
+  f.t += dt;
+  const st = f.state;
+  if (st === 'dead'){
+    if (f.t > 4.5){ const k = clamp((5.5-f.t),0,1); f.mesh.scale.set(FLY_S*1.35*k, FLY_S*.15*k, FLY_S*1.35*k); f.splat.material.opacity = .55*k; }
+    if (f.t > 5.5){ scene.remove(f.mesh); scene.remove(f.splat); f.gone = true; }
+    return;
+  }
+  if (st === 'fly'){
+    f.ft += dt; const u = clamp(f.ft/f.fdur,0,1), a = 1-u, w = Math.sin(f.ft*11)*.25*(1-Math.abs(2*u-1));
+    const px = a*a*f.p0.x + 2*a*u*f.pc.x + u*u*f.p1.x, py = a*a*f.p0.y + 2*a*u*f.pc.y + u*u*f.p1.y, pz = a*a*f.p0.z + 2*a*u*f.pc.z + u*u*f.p1.z;
+    const vx = px-f.x, vz = pz-f.z; if (Math.hypot(vx,vz) > 1e-4) f.h = Math.atan2(vx,vz);
+    f.x = px + w*Math.cos(f.h); f.y = py + Math.sin(f.ft*7)*.12*(1-u); f.z = pz - w*Math.sin(f.h);
+    if (u >= 1){ f.x = f.p1.x; f.y = f.p1.y; f.z = f.p1.z; f.s = f.dest; f.th = null; f.inL = f.inR = 0; setState(f, 'idle', rand(.4,1)); }
+    drawFly(f, dt); return;
+  }
+  if (st === 'jump'){
+    f.x += f.vx*dt; f.y += f.vy*dt; f.z += f.vz*dt; f.vy -= 6*dt;
+    if (f.t >= f.dur){ f.x0 = f.x; beginFlight(f, pickSpot(sw)); }
+    drawFly(f, dt); return;
+  }
+  if (st === 'crouch'){
+    if (f.t >= f.dur) doJump(f);
+    drawFly(f, dt); return;
+  }
+  // 지면 상태: idle / walk / groom → 매 프레임 뇌가 판단
+  if (sense(f, dt)){ triggerEscape(f); drawFly(f, dt); return; }
+  if (!G.lab || G.labWander) f.wanderT -= dt;
+  if (st === 'walk'){
+    f.turn += rand(-1,1)*dt*6; f.turn = clamp(f.turn, -2, 2); f.h += f.turn*dt;
+    const v = G.lv.walk, nx = f.x + Math.sin(f.h)*v*dt, nz = f.z + Math.cos(f.h)*v*dt, s = f.s;
+    if (nx < s.x0+.2 || nx > s.x1-.2 || nz < s.z0+.2 || nz > s.z1-.2 || surfaceAt(nx,nz) !== s || blocked(nx,nz)){
+      f.h += Math.PI*rand(.6,1.4); f.turn = 0;
+    } else { f.x = nx; f.z = nz; }
+  }
+  if (f.t >= f.dur){
+    if (f.wanderT <= 0){ f.wanderT = rand(...G.lv.wander); beginFlight(f, pickSpot(f)); if (!G.lab) sfx.buzzKick(); }
+    else {
+      const r = Math.random();
+      if (r < .5) setState(f, 'walk', rand(1,3)); else if (r < .82) setState(f, 'groom', rand(1.5,3.5)); else setState(f, 'idle', rand(.5,1.5));
+      f.turn = 0;
+    }
+  }
+  drawFly(f, dt);
+}
+function drawFly(f, dt){
+  f.mesh.position.set(f.x, f.y, f.z); f.mesh.rotation.y = f.h;
+  const u = f.mesh.userData; f.flap += dt;
+  if (f.state === 'fly' || f.state === 'jump'){ const s = Math.sin(f.flap*70)*.9; u.wl.rotation.z = s; u.wr.rotation.z = -s; f.mesh.rotation.x = -.15; }
+  else {
+    f.mesh.rotation.x = f.state === 'crouch' ? .25 : 0;
+    const up = f.state === 'crouch' ? .7 : .15; u.wl.rotation.z = up; u.wr.rotation.z = -up;
+    for (let i=0;i<6;i++){
+      const leg = u.legs[i], sx = i<3?-1:1;
+      if (f.state === 'walk') leg.rotation.x = Math.sin(f.flap*18 + i*2.1)*.5;
+      else if (f.state === 'groom' && (i===0||i===3)) leg.rotation.x = -1.1 + Math.sin(f.flap*14)*.35;
+      else leg.rotation.x = 0;
+      leg.rotation.z = sx*.5;
+    }
+  }
+}
+function killFly(f){
+  setState(f, 'dead', 0);
+  f.mesh.traverse(o => { if (o.isMesh) o.material = FM.dead; });
+  f.y = sw.base + .02; f.mesh.position.y = f.y; f.mesh.rotation.x = 0;
+  f.mesh.scale.set(FLY_S*1.35, FLY_S*.15, FLY_S*1.35);
+  f.splat = new THREE.Mesh(FG.splat, FM.splat.clone()); f.splat.rotation.x = -Math.PI/2; f.splat.position.set(f.x, sw.base+.012, f.z); scene.add(f.splat);
+}
+
+/* ================= 파리채 갱신 · 타격 판정 ================= */
+function updateSwatter(dt){
+  if (inp.pressed){ inp.pressed = false; if (sw.mode !== 'strike' && sw.mode !== 'squash' && G.canSwat()) sw.mode = 'lower'; }
+  if (inp.released){ inp.released = false; if (sw.mode === 'lower') startStrike(); }
+  if (sw.mode !== 'strike' && sw.mode !== 'squash'){
+    const k = 1-Math.exp(-dt*12); let mx = (aim.x-sw.x)*k, mz = (aim.z-sw.z)*k;
+    const m = Math.hypot(mx,mz), cap = MOVE_V*dt; if (m > cap){ mx *= cap/m; mz *= cap/m; }
+    sw.x += mx; sw.z += mz;
+  }
+  sw.base = baseUnder(sw.x, sw.z);
+  if (sw.mode === 'hover') sw.y += clamp(HOVER_Y-sw.y, -4*dt, 4*dt);
+  else if (sw.mode === 'lower'){ sw.y = Math.max(sw.y - LOWER_V*dt, sw.base + .3); }
+  else if (sw.mode === 'strike'){ sw.y -= STRIKE_V*dt; if (sw.y <= sw.base){ sw.y = sw.base; contact(); } }
+  else if (sw.mode === 'squash'){ sw.t -= dt; if (sw.t <= 0) sw.mode = 'recover'; }
+  else if (sw.mode === 'recover'){ sw.y += 7*dt; if (sw.y >= HOVER_Y){ sw.y = HOVER_Y; sw.mode = 'hover'; } }
+  if (sw.mode !== 'strike' && sw.mode !== 'squash') sw.y = Math.max(sw.y, sw.base + .3);
+}
+function startStrike(){ sw.mode = 'strike'; sw.strikeH = sw.y - sw.base; sw.strikeT = G.t; if (!G.lab) sfx.whoosh(); }
+function contact(){
+  sw.mode = 'squash'; sw.t = .14; G.squash = 1;
+  const hits = [];
+  for (const f of flies){
+    if (f.state === 'dead' || f.state === 'fly') continue;
+    const rel = f.y - sw.base;
+    if (rel < -.25 || rel > .35) continue;
+    if (Math.abs(f.x-sw.x) < SW_HALF+.12 && Math.abs(f.z-sw.z) < SW_HALF+.12) hits.push(f);
+  }
+  G.events.push({type:'contact', hits:hits.map(f=>f.id), h:sw.strikeH, t:G.t, base:sw.base,
+    near:flies.map(f => ({id:f.id, st:f.state, dx:+(f.x-sw.x).toFixed(2), dz:+(f.z-sw.z).toFixed(2), rel:+(f.y-sw.base).toFixed(2)}))});
+  if (G.lab){ for (const f of hits) killFly(f); return; }
+  G.shake = hits.length ? .35 : .18; sfx.thwack(hits.length > 0);
+  if (hits.length){
+    let gained = 0;
+    for (const f of hits){
+      killFly(f); G.kills++; G.combo++; G.bestCombo = Math.max(G.bestCombo, G.combo);
+      const mult = Math.min(G.combo, 8), low = sw.strikeH < 2.2 ? 50 : 0;
+      gained += 100*mult + low;
+      burst(f.x, sw.base+.1, f.z);
+    }
+    G.score += gained; G.hits++;
+    popText(sw.x, sw.base+1, sw.z, `+${gained}` + (G.combo>1 ? `  ×${Math.min(G.combo,8)}` : ''), '');
+    if (sw.strikeH < 2.2) setTimeout(()=>popText(sw.x, sw.base+1.8, sw.z, '저공 일격 +50', 'esc'), 120);
+  } else {
+    G.misses++; if (G.combo > 1) popText(sw.x, sw.base+1, sw.z, '콤보 끊김', 'miss'); else popText(sw.x, sw.base+1, sw.z, '헛손질', 'miss');
+    G.combo = 0;
+  }
+}
+
+/* ================= 효과 ================= */
+const parts = [];
+const PG = new THREE.BoxGeometry(.09,.09,.09);
+function burst(x,y,z){
+  for (let i=0;i<14;i++){
+    const m = new THREE.Mesh(PG, i%3 ? FM.dead : FM.wing); m.position.set(x,y,z); scene.add(m);
+    parts.push({m, vx:rand(-2.5,2.5), vy:rand(1.5,4), vz:rand(-2.5,2.5), t:0, base:y-.08});
+  }
+}
+function updateParts(dt){
+  for (let i=parts.length-1;i>=0;i--){
+    const p = parts[i]; p.t += dt; p.vy -= 12*dt;
+    p.m.position.x += p.vx*dt; p.m.position.y = Math.max(p.base, p.m.position.y + p.vy*dt); p.m.position.z += p.vz*dt;
+    if (p.m.position.y <= p.base){ p.vx *= .8; p.vz *= .8; }
+    if (p.t > .9){ scene.remove(p.m); parts.splice(i,1); }
+  }
+}
+const pops = [];
+function popText(x,y,z,txt,cls){
+  const el = document.createElement('div'); el.className = 'pop ' + (cls||''); el.textContent = txt; $('fx').appendChild(el);
+  pops.push({el, p:new THREE.Vector3(x,y,z), t:0});
+}
+function agePops(dt){            // 시간은 시뮬레이션 스텝에서 흐르고
+  for (let i=pops.length-1;i>=0;i--){ const o = pops[i]; o.t += dt; if (o.t > 1){ o.el.remove(); pops.splice(i,1); } }
+}
+function updatePops(){           // 화면 위치는 그릴 때 계산
+  const v = new THREE.Vector3(), W = view.clientWidth, H = view.clientHeight;
+  for (const o of pops){
+    v.copy(o.p); v.y += o.t*1.2; v.project(camera);
+    o.el.style.left = ((v.x+1)/2*W) + 'px'; o.el.style.top = ((1-v.y)/2*H) + 'px'; o.el.style.opacity = clamp(1.6-o.t*1.6,0,1);
+  }
+}
+let flashT = 0;
+function flashGF(){ flashT = .9; }
+
+/* ================= 소리 (첫 입력 뒤에만) ================= */
+const sfx = (() => {
+  let ctx = null, master = null, buzzG = null, osc = null, noiseBuf = null, muted = false;
+  try { muted = localStorage.getItem('connectome-swat.mute') === '1'; } catch(e){}
+  function init(){
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    ctx = new AC(); master = ctx.createGain(); master.gain.value = muted ? 0 : .8; master.connect(ctx.destination);
+    osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 190;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 23; const lg = ctx.createGain(); lg.gain.value = 14; lfo.connect(lg); lg.connect(osc.frequency);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = .9;
+    buzzG = ctx.createGain(); buzzG.gain.value = 0; osc.connect(bp); bp.connect(buzzG); buzzG.connect(master); osc.start(); lfo.start();
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*.3, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  }
+  function noise(dur, freq, vol){
+    if (!ctx) return; const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq; const g = ctx.createGain();
+    const t = ctx.currentTime; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t+dur+.02);
+  }
+  function tone(f0, f1, dur, vol, type){
+    if (!ctx) return; const o = ctx.createOscillator(); o.type = type||'sine'; const g = ctx.createGain(), t = ctx.currentTime;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t+dur); o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.02);
+  }
+  let kick = 0;
+  return {
+    init,
+    get muted(){ return muted; },
+    setMuted(m){ muted = m; try { localStorage.setItem('connectome-swat.mute', m?'1':'0'); } catch(e){} if (master) master.gain.value = m ? 0 : .8; },
+    buzz(nFlying, dt){
+      if (!ctx) return; kick = Math.max(0, kick - dt);
+      const target = Math.min(.16, nFlying*.06) + kick*.08;
+      buzzG.gain.value += (target - buzzG.gain.value)*Math.min(1, dt*8);
+      osc.frequency.value = 180 + Math.sin(performance.now()/170)*12 + nFlying*6;
+    },
+    buzzKick(){ kick = 1; },
+    whoosh(){ noise(.12, 2400, .25); },
+    thwack(hit){ noise(.18, hit ? 700 : 1200, .9); tone(hit?110:150, 50, .16, .6); if (hit) noise(.25, 300, .5); },
+    zip(){ tone(420, 980, .14, .12, 'sawtooth'); kick = 1; }
+  };
+})();
+
+/* ================= 게임 상태 ================= */
+const G = {
+  phase:'menu', lab:false, labWander:false, lv:LEVELS[0], level:1, score:0, time:45, kills:0, levelKills:0, combo:0, bestCombo:0,
+  hits:0, misses:0, shake:0, squash:0, t:0, spawnT:0, bannerT:0, target:null, events:[], stats:{escapes:0},
+  canSwat(){ return this.phase === 'play' || this.lab; }
+};
+let best = 0; try { best = +localStorage.getItem('connectome-swat.best') || 0; } catch(e){}
+$('bestTxt').textContent = best.toLocaleString();
+$('metaLine').textContent = `뇌: FlyWire 커넥톰 ${T.meta.neurons.toLocaleString()}개 뉴런 · 연결 ${T.meta.synapse_rows.toLocaleString()}쌍 전체를 ${T.meta.model} 모델로 미리 시뮬레이션한 반응표(${T.meta.sim_ms}ms)를 실시간 보간합니다. 입력은 눈별 루밍 감지 뉴런(LPLC2+LC4) 0~100Hz, 출력은 거대섬유 DNp01·DNp04 발화율입니다.`;
+
+function clearFlies(){
+  for (const f of flies){ scene.remove(f.mesh); if (f.splat) scene.remove(f.splat); }
+  flies = []; G.target = null;
+}
+function banner(t, p, dur){ $('bnT').textContent = t; $('bnP').textContent = p; $('banner').classList.add('on'); G.bannerT = dur; }
+function startGame(){
+  sfx.init();
+  G.score = 0; G.combo = 0; G.bestCombo = 0; G.kills = 0; G.hits = 0; G.misses = 0; G.stats.escapes = 0;
+  $('startOv').hidden = true; $('overOv').hidden = true;
+  startLevel(1);
+}
+function startLevel(n){
+  clearFlies(); G.lab = false;
+  G.level = n; G.lv = LEVELS[n-1]; G.killsAtLevelStart = G.kills; G.time = G.lv.time; G.levelKills = 0; G.spawnT = .3;
+  G.phase = 'intro'; sw.mode = 'hover'; inp.down = false;
+  banner(`레벨 ${n}`, `파리 ${G.lv.flies}마리 · 경계심 ×${G.lv.gain.toFixed(1)} · 목표 ${G.lv.quota}마리 · ${G.lv.time}초`, 2.2);
+  $('app').classList.add('playing');
+}
+function endGame(won){
+  G.phase = 'over'; inp.down = false; $('app').classList.remove('playing');
+  const nb = G.score > best; if (nb){ best = G.score; try { localStorage.setItem('connectome-swat.best', String(best)); } catch(e){} }
+  $('ovTitle').textContent = won ? '부엌 평정!' : '시간 종료';
+  $('ovLead').textContent = (won ? '다섯 레벨을 모두 깼습니다. ' : `레벨 ${G.level}에서 멈췄습니다. `) + (nb ? '새 최고 점수입니다.' : '천천히 다가갈수록 거대섬유가 늦게 깨어납니다.');
+  $('rScore').textContent = G.score.toLocaleString(); $('rKills').textContent = G.kills; $('rEsc').textContent = G.stats.escapes;
+  const sw_ = G.hits + G.misses; $('rAcc').textContent = (sw_ ? Math.round(G.hits/sw_*100) : 0) + '%';
+  $('rCombo').textContent = G.bestCombo; $('rBest').textContent = best.toLocaleString(); $('bestTxt').textContent = best.toLocaleString();
+  $('overOv').hidden = false;
+}
+function toMenu(){ G.phase = 'menu'; clearFlies(); $('overOv').hidden = true; $('startOv').hidden = false; $('app').classList.remove('playing'); idleFlies(); }
+function idleFlies(){ G.lv = LEVELS[1]; for (let i=0;i<3;i++) newFly(); }
+
+function stepGame(dt){
+  if (G.bannerT > 0){ G.bannerT -= dt; if (G.bannerT <= 0) $('banner').classList.remove('on'); }
+  if (G.phase === 'intro' && G.bannerT <= .6) G.phase = 'play';
+  if (G.phase === 'clear' && G.bannerT <= 0){ if (G.level >= 5) endGame(true); else startLevel(G.level+1); }
+  if (G.phase !== 'play' && G.phase !== 'intro') return;
+  const alive = flies.filter(f => f.state !== 'dead').length;
+  G.spawnT -= dt;
+  if (alive < G.lv.flies && G.spawnT <= 0){ newFly(); G.spawnT = 1.1; }
+  if (G.phase !== 'play') return;
+  G.time -= dt;
+  G.levelKills = G.kills - G.killsAtLevelStart;
+  if (G.levelKills >= G.lv.quota){
+    const bonus = Math.ceil(G.time)*10; G.score += bonus; G.phase = 'clear';
+    banner('레벨 클리어!', `남은 시간 보너스 +${bonus}`, 2.2); sw.mode = sw.mode === 'lower' ? 'recover' : sw.mode;
+  } else if (G.time <= 0){ G.time = 0; endGame(false); }
+}
+
+/* ================= 한 스텝 (렌더와 분리 · 헤드리스 가능) ================= */
+function step(dt){
+  G.t += dt;
+  if (G.script) G.script(dt);
+  updateSwatter(dt);
+  for (const f of flies) updateFly(f, dt);
+  if (flies.some(f => f.gone)) flies = flies.filter(f => !f.gone);
+  // 노린 파리 = 파리채 아래 수평으로 가장 가까운 앉은 파리
+  let tg = null, bd = 1e9;
+  for (const f of flies){ if (f.state === 'dead' || f.state === 'fly') continue; const d = Math.hypot(f.x-sw.x, f.z-sw.z); if (d < bd){ bd = d; tg = f; } }
+  if (!(G.target && (G.target.state === 'crouch' || G.target.state === 'jump'))) G.target = tg;
+  stepGame(dt);
+  updateParts(dt); agePops(dt);
+  G.shake = Math.max(0, G.shake - dt*1.6); G.squash = Math.max(0, G.squash - dt*5);
+  if (!G.lab && G.events.length > 60) G.events.length = 0;
+  sfx.buzz(flies.filter(f => f.state === 'fly' || f.state === 'jump').length, dt);
+}
+G.killsAtLevelStart = 0;
+
+/* ================= 그리기 ================= */
+const CAM = {t:new THREE.Vector3(), dir:new THREE.Vector3(0,.9,.44).normalize(), dist:14, base:new THREE.Vector3()};
+function fitCamera(){
+  const W = view.clientWidth || 1, H = view.clientHeight || 1, a = W/H;
+  renderer.setSize(W, H, false); camera.aspect = a;
+  let fov = 44, halfW = 8.6;
+  if (a < .85){ fov = 56; halfW = 6.2; CAM.t.set(0, 3.6, -2.2); } else CAM.t.set(0, 4.6, -2.4);
+  const tn = Math.tan(THREE.MathUtils.degToRad(fov/2));
+  CAM.dist = Math.max(17, halfW/(tn*a));
+  camera.fov = fov; camera.updateProjectionMatrix();
+  CAM.base.copy(CAM.t).addScaledVector(CAM.dir, CAM.dist);
+}
+window.addEventListener('resize', fitCamera);
+const _gfI = $('bGF'), _ui = {};
+$('bTh').style.left = (GF_TH/160*100) + '%';
+function render(dt){
+  camera.position.copy(CAM.base);
+  if (G.shake > 0){ const s = G.shake*G.shake*1.2; camera.position.x += rand(-s,s); camera.position.y += rand(-s,s); }
+  camera.lookAt(CAM.t);
+  // 파리채
+  swat.position.set(sw.x, sw.y, sw.z);
+  const sq = G.squash; swHead.scale.set(1+sq*.12, 1-sq*.6, 1+sq*.12);
+  swat.rotation.x = sw.mode === 'strike' ? -.08 : 0;
+  shadow.position.set(sw.x, sw.base+.015, sw.z);
+  const hgt = sw.y - sw.base; shadow.material.opacity = clamp(.42 - hgt*.045, .1, .42);
+  const tg = G.target;
+  const danger = tg ? clamp(tg.gf/GF_TH, 0, 1.4) : 0;
+  shadow.material.color.setRGB(danger > 1 ? .55 : danger*.45, 0, 0);
+  if (tg && G.phase !== 'menu'){ ring.visible = true; ring.position.set(tg.x, tg.y+.02, tg.z); ring.material.color.setRGB(.48+danger*.5, clamp(.85-danger*.6,0,1), .45); }
+  else ring.visible = false;
+  updatePops();
+  renderer.render(scene, camera);
+  // HUD
+  setTxt('lvTxt', G.level); setTxt('scTxt', G.score.toLocaleString()); setTxt('tmTxt', Math.ceil(G.time));
+  setTxt('qTxt', `${Math.min(G.kills - G.killsAtLevelStart, G.lv.quota)}/${G.lv.quota}`); setTxt('cbTxt', '×' + Math.max(1, Math.min(G.combo, 8)));
+  $('time').classList.toggle('low', G.phase === 'play' && G.time < 10);
+  setTxt('bgain', `경계심 ×${G.lv.gain.toFixed(1)}`);
+  const b = tg ? tg.b : brain2(0,0), inL = tg ? tg.inL : 0, inR = tg ? tg.inR : 0, gf = tg ? tg.gf : 0;
+  setW('bInL', inL/100); setW('bInR', inR/100); setW('bGF', gf/160); setW('bP4L', b.DNp04_L/250); setW('bP4R', b.DNp04_R/250);
+  _gfI.style.background = gf > GF_TH ? 'var(--warn)' : gf > GF_TH*.7 ? 'var(--accent)' : 'var(--good)';
+  setTxt('bGFv', Math.round(gf) + ' Hz');
+  let st = '노릴 파리가 없습니다';
+  if (tg){
+    const name = {idle:'가만히 있음', walk:'걷는 중', groom:'털 고르는 중 (감각 둔함)', crouch:'점프 준비!', jump:'탈출 점프!'}[tg.state] || '';
+    st = `${name} · 거리 ${tg.d < 50 ? tg.d.toFixed(1) : '-'}블록`;
+  }
+  setTxt('bstate', st);
+  flashT = Math.max(0, flashT - dt); $('gfFlash').classList.toggle('on', flashT > 0);
+}
+function setTxt(id, v){ v = String(v); if (_ui[id] !== v){ _ui[id] = v; $(id).textContent = v; } }
+function setW(id, f){ const v = (clamp(f,0,1)*100).toFixed(1) + '%'; if (_ui['w'+id] !== v){ _ui['w'+id] = v; $(id).style.width = v; } }
+
+/* ================= 입력 ================= */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function aimAt(cx, cy){
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set((cx-r.left)/r.width*2-1, -(cy-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(pickPlanes, false)[0];
+  if (hit){ aim.x = clamp(hit.point.x, -9, 9); aim.z = clamp(hit.point.z, -6.6, 10); }
+}
+const cv = renderer.domElement;
+let activePtr = null;
+cv.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse' || e.pointerId === activePtr) aimAt(e.clientX, e.clientY - (e.pointerType === 'touch' ? 40 : 0));
+});
+cv.addEventListener('pointerdown', e => {
+  sfx.init(); if (activePtr !== null) return;
+  activePtr = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch(_){}
+  aimAt(e.clientX, e.clientY - (e.pointerType === 'touch' ? 40 : 0));
+  if (G.canSwat()){ inp.down = true; inp.pressed = true; }
+  e.preventDefault();
+});
+function up(e){ if (e.pointerId !== activePtr) return; activePtr = null; if (inp.down){ inp.down = false; inp.released = true; } }
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat && G.canSwat()){ sfx.init(); inp.down = true; inp.pressed = true; e.preventDefault(); } });
+window.addEventListener('keyup', e => { if (e.code === 'Space' && inp.down){ inp.down = false; inp.released = true; } });
+$('startBtn').onclick = startGame; $('againBtn').onclick = startGame; $('menuBtn').onclick = toMenu;
+function syncMute(){ $('muteBtn').textContent = sfx.muted ? '소리 끔' : '소리 켬'; }
+$('muteBtn').onclick = () => { sfx.init(); sfx.setMuted(!sfx.muted); syncMute(); }; syncMute();
+
+/* ================= 루프 ================= */
+let last = performance.now(), paused = false;
+function frame(now){
+  const dt = Math.min(.05, Math.max(0, (now-last)/1000)); last = now;
+  if (!paused) step(dt);
+  render(dt);
+  requestAnimationFrame(frame);
+}
+
+/* ================= 디버그 훅 ================= */
+function runLab(opts){
+  // 격리 실험: 파리 1마리를 식탁에 두고, 파리채가 파리를 따라가며(사람처럼) 정해진 방식으로 접근한다.
+  const o = Object.assign({mode:'fast', lowerSpeed:LOWER_V, stopHeight:2, strikeAtGF:null, level:1, wander:false, hoverT:.6, maxT:30, dt:1/60}, opts||{});
+  const wasPaused = paused; paused = true;
+  const keep = {phase:G.phase, lv:G.lv, flies, target:G.target, sw:Object.assign({}, sw)};
+  flies = []; G.lab = true; G.labWander = o.wander; G.lv = LEVELS[o.level-1]; G.events = []; G.script = null;
+  const at = o.at || {x:rand(-3.5,3.5), z:rand(-2.3,2.3)};
+  // 접시·수박이 파리채를 막지 않는 맨 식탁 위 지점만 쓴다 (순수하게 뇌 반응만 비교)
+  let p = at; while (surfaceAt(p.x,p.z).id !== 'table' || blocked(p.x,p.z) || baseUnder(p.x,p.z) !== 3) p = {x:rand(-3.5,3.5), z:rand(-2.3,2.3)};
+  const f = newFly({at:p, h:rand(0,6.28)});
+  f.wanderT = 1e9; f.gfPeak = 0;
+  if (o.state) setState(f, o.state, 1e9); else setState(f, 'idle', rand(.2,1));
+  sw.x = aim.x = f.x; sw.z = aim.z = f.z; sw.base = baseUnder(sw.x, sw.z); sw.y = HOVER_Y; sw.mode = 'hover';
+  inp.pressed = inp.released = false; inp.down = false;
+  let t = 0, phase = 'hover', speed = o.lowerSpeed, res = null;
+  const saveLower = LOWER_V;
+  while (t < o.maxT){
+    if (f.state !== 'fly' && f.state !== 'jump' && f.state !== 'dead'){ aim.x = f.x; aim.z = f.z; }
+    if (phase === 'hover' && t >= o.hoverT){
+      if (o.mode === 'fast'){ inp.pressed = true; inp.released = true; phase = 'striking'; }
+      else { inp.pressed = true; phase = 'lowering'; }
+    }
+    if (phase === 'lowering'){
+      // 내려가는 속도를 바꿔 넣기 위해 직접 y를 조정 (LOWER_V 대신 speed)
+      if (sw.mode === 'lower') sw.y += (LOWER_V - speed)*o.dt;
+      if (o.mode !== 'probe' && (sw.y - sw.base <= o.stopHeight || (o.strikeAtGF != null && f.gf >= o.strikeAtGF))){ inp.released = true; phase = 'striking'; }
+    }
+    step(o.dt); t += o.dt;
+    const esc = G.events.find(e => e.type === 'escape'), con = G.events.find(e => e.type === 'contact');
+    if (o.mode === 'probe' && esc){ res = {escaped:true, triggerHeight:+esc.h.toFixed(2), gf:+esc.gf.toFixed(1), t:+t.toFixed(2)}; break; }
+    if (con){ res = {caught: con.hits.includes(f.id), escaped:!!esc, escapedBeforeStrike: !!esc && esc.t < sw.strikeT - 1e-9, triggerHeight: esc ? +esc.h.toFixed(2) : null, strikeHeight:+con.h.toFixed(2), flyAtContact:con.near[0], shielded: con.base > f.s.y + .3, gfPeak:+f.gfPeak.toFixed(1), t:+t.toFixed(2)}; break; }
+    if (o.mode === 'probe' && sw.y - sw.base <= .31){ res = {escaped:false, triggerHeight:null, gfPeak:+f.gfPeak.toFixed(1)}; break; }
+  }
+  clearFlies();                                          // 실험용 파리 정리 후 원래 파리 복원
+  flies = keep.flies; G.target = keep.target; G.lv = keep.lv; G.lab = false; G.script = null; Object.assign(sw, keep.sw);
+  for (const fl of flies) scene.add(fl.mesh);
+  paused = wasPaused;
+  return res || {timeout:true};
+}
+window.__game = {
+  get state(){ return {phase:G.phase, level:G.level, score:G.score, time:+G.time.toFixed(2), kills:G.kills, combo:G.combo, escapes:G.stats.escapes,
+    flies:flies.map(f => ({id:f.id, state:f.state, x:+f.x.toFixed(2), y:+f.y.toFixed(2), z:+f.z.toFixed(2), gf:+f.gf.toFixed(1)})),
+    swatter:{x:+sw.x.toFixed(2), y:+sw.y.toFixed(2), base:sw.base, mode:sw.mode}}; },
+  G, sw, brain2, T,
+  start: startGame, startLevel: n => startLevel(n),
+  step(dt=1/60, n=1, draw=true){ for (let i=0;i<n;i++) step(dt); if (draw) render(0); return this.state; },
+  pause(b=true){ paused = b; },
+  aim(x,z){ aim.x = x; aim.z = z; }, press(){ inp.down = true; inp.pressed = true; }, release(){ inp.down = false; inp.released = true; },
+  trial: runLab,                                         // {mode:'fast'|'slow', lowerSpeed, stopHeight, level}
+  probe: (speed, level=2) => runLab({mode:'probe', lowerSpeed:speed, level, state:'idle'}),   // 일정 속도로 내려올 때 탈출이 켜지는 높이
+};
+
+fitCamera(); idleFlies(); requestAnimationFrame(frame);
+</script>
