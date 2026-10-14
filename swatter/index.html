@@ -28,7 +28,8 @@ button{font:inherit;cursor:pointer}
 #combo b{color:var(--accent)}
 #time.low b{color:var(--warn)}
 #top .sp{flex:1}
-#muteBtn{pointer-events:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;min-width:44px;min-height:40px}
+#pauseBtn{display:none}#app.playing #pauseBtn{display:inline-block}
+#muteBtn,#pauseBtn{pointer-events:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;min-width:44px;min-height:40px}
 
 /* 뇌 패널 */
 #brain{position:absolute;left:10px;bottom:10px;width:min(300px,calc(100% - 20px));background:var(--panel);border:1px solid var(--line);
@@ -85,6 +86,7 @@ details p{margin-top:8px;font-size:12.5px;line-height:1.65;color:var(--dim)}
 details p b{color:var(--ink)}
 .row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
 .big{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:13px 22px;font-size:16px;font-weight:900;min-height:48px}
+a.exit{text-decoration:none;display:inline-flex;align-items:center}
 .ghost{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14px;min-height:48px}
 .best{color:var(--dim);font-size:13px}
 .best b{color:var(--ink)}
@@ -108,6 +110,7 @@ details p b{color:var(--ink)}
     <div class="chip"><small>잡은 수</small><b id="qTxt">0/3</b></div>
     <div class="chip" id="combo"><small>콤보</small><b id="cbTxt">×1</b></div>
     <div class="sp"></div>
+    <button id="pauseBtn" aria-label="일시정지 메뉴">⏸ 일시정지</button>
     <button id="muteBtn" aria-label="소리 켜기/끄기">소리 켬</button>
   </div>
   <div id="brain" aria-live="off">
@@ -136,7 +139,7 @@ details p b{color:var(--ink)}
         <p><b>뇌가 정하는 것:</b> 파리채의 겉보기 크기 θ = 2·atan(r/d)가 커지는 속도(dθ/dt)를 루밍 감지 뉴런(LPLC2·LC4) 입력 0~100Hz로 바꿔 왼눈·오른눈에 나눠 넣습니다(위에서 오면 양쪽 모두). 미리 계산한 전뇌 반응표를 보간해 거대섬유(DNp01) 평균 발화율이 <b>45Hz를 넘는 순간에만</b> 탈출합니다. 어느 쪽으로 뛸지는 위협 쪽에서 켜지는 DNp04의 좌우 차이로 정합니다. 이 모델에서 빠른 물체는 약 3.1블록, 느린 물체는 약 1.5블록에서야 탈출을 일으켰습니다. 이 게임의 파리채(경계심 ×1.0)로 재 보면 초당 1블록으로 내릴 때 약 1.8블록, 초당 4블록이면 약 3.6블록 거리에서 탈출이 켜집니다. 그래서 천천히 다가가는 전략이 실제로 통합니다.</p>
         <p><b>손으로 만든 것:</b> 걷기·털 고르기·비행·점프 같은 몸 동작, dθ/dt를 Hz로 바꾸는 변환과 30ms 평활, 점프 준비 시간(40~110ms), 레벨별 「경계심」(감각 이득만 0.8~1.6배로 조정, 뇌 출력은 건드리지 않음), 털 고르는 중의 감각 이득 0.7배. 반응표는 300ms 정상상태 발화율이라 밀리초 단위 신경 지연은 반영되지 않습니다.</p>
       </details>
-      <div class="row"><button class="big" id="startBtn">게임 시작</button><span class="best">최고 점수 <b id="bestTxt">0</b></span></div>
+      <div class="row"><button class="big" id="startBtn">게임 시작</button><span class="best">최고 점수 <b id="bestTxt">0</b></span><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로</a></div>
     </div>
   </div>
 
@@ -152,7 +155,15 @@ details p b{color:var(--ink)}
         <div><b id="rCombo">0</b>최고 콤보</div>
         <div><b id="rBest">0</b>최고 점수</div>
       </div>
-      <div class="row"><button class="big" id="againBtn">다시 하기</button><button class="ghost" id="menuBtn">처음 화면</button></div>
+      <div class="row"><button class="big" id="againBtn">다시 하기</button><button class="ghost" id="menuBtn">처음 화면</button><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로</a></div>
+    </div>
+  </div>
+
+  <div class="ov" id="pauseOv" hidden>
+    <div class="card">
+      <h1>일시정지</h1>
+      <p class="lead">파리들도 잠시 멈췄습니다. Esc를 다시 누르면 이어서 합니다.</p>
+      <div class="row"><button class="big" id="resumeBtn">계속하기</button><button class="ghost" id="restartBtn">처음부터 다시</button><button class="ghost" id="quitBtn">처음 화면</button><a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로 나가기</a></div>
     </div>
   </div>
 </div>
@@ -617,7 +628,7 @@ const sfx = (() => {
 const G = {
   phase:'menu', lab:false, labWander:false, lv:LEVELS[0], level:1, score:0, time:45, kills:0, levelKills:0, combo:0, bestCombo:0,
   hits:0, misses:0, shake:0, squash:0, t:0, spawnT:0, bannerT:0, target:null, events:[], stats:{escapes:0},
-  canSwat(){ return this.phase === 'play' || this.lab; }
+  canSwat(){ return !paused && (this.phase === 'play' || this.lab); }
 };
 let best = 0; try { best = +localStorage.getItem('connectome-swat.best') || 0; } catch(e){}
 $('bestTxt').textContent = best.toLocaleString();
@@ -769,6 +780,15 @@ cv.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat && G.canSwat()){ sfx.init(); inp.down = true; inp.pressed = true; e.preventDefault(); } });
 window.addEventListener('keyup', e => { if (e.code === 'Space' && inp.down){ inp.down = false; inp.released = true; } });
 $('startBtn').onclick = startGame; $('againBtn').onclick = startGame; $('menuBtn').onclick = toMenu;
+function setPause(on){
+  if (on && !(G.phase === 'play' || G.phase === 'intro' || G.phase === 'clear')) return;
+  paused = on; inp.down = false; inp.pressed = false; $('pauseOv').hidden = !on;
+}
+$('pauseBtn').onclick = () => setPause(true);
+$('resumeBtn').onclick = () => setPause(false);
+$('restartBtn').onclick = () => { setPause(false); startGame(); };
+$('quitBtn').onclick = () => { setPause(false); toMenu(); };
+window.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p' || e.key === 'P'){ if (!$('pauseOv').hidden) setPause(false); else setPause(true); } });
 function syncMute(){ $('muteBtn').textContent = sfx.muted ? '소리 끔' : '소리 켬'; }
 $('muteBtn').onclick = () => { sfx.init(); sfx.setMuted(!sfx.muted); syncMute(); }; syncMute();
 

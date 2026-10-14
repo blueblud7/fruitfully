@@ -947,7 +947,7 @@ const GAMES = [
 (function(){
   const panel = $('games'), btn = $('gamesBtn');
   $('gameCards').innerHTML = GAMES.map(g => g.ready
-    ? `<a class="gcard" href="https://fruitfly.blueming.net/${g.id}/" target="_blank" rel="noopener"><span class="pill ok">플레이 ↗</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></a>`
+    ? `<a class="gcard" href="https://fruitfly.blueming.net/${g.id}/"><span class="pill ok">플레이 →</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></a>`
     : `<div class="gcard soon"><span class="pill">준비 중</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></div>`).join('');
   const show = on => { panel.hidden = !on; btn.setAttribute('aria-expanded', on); };
   btn.onclick = e => { e.preventDefault(); show(panel.hidden); };
