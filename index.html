@@ -15,6 +15,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:"Preten
 #tabs{position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:2}
 #tabs button{background:rgba(20,22,28,.82);color:#fff;border:1px solid #ffffff22;padding:8px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
 #tabs a.game{background:#ffcf4a;color:#1b1406;border-radius:999px;padding:8px 14px;font-size:14px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center}
+#games{position:absolute;top:60px;left:12px;right:12px;max-width:760px;max-height:calc(100% - 80px);overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:14px;z-index:5;box-shadow:0 12px 40px #0006}
+#games .ghead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+#games .ghead span{color:var(--dim);font-size:12.5px;flex:1;min-width:0}
+#games .ghead a{color:var(--dim);text-decoration:none;font-size:18px}
+#gameCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.gcard{display:flex;flex-direction:column;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text);text-decoration:none;min-width:0}
+a.gcard:hover,a.gcard:focus-visible{border-color:var(--accent);outline:none}
+.gcard .gt{font-weight:700;font-size:15px}
+.gcard .gd{color:var(--dim);font-size:12.5px;line-height:1.5}
+.gcard .gb{font-size:11.5px;color:var(--dim)}
+.gcard.soon{opacity:.6}
+.gcard .pill{align-self:flex-start;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--line);color:var(--dim)}
+.gcard .pill.ok{background:var(--accent);color:#0b1a10;font-weight:700}
 #tabs button.on{background:var(--accent);color:#0b1a10;font-weight:700;border-color:transparent}
 #hud{position:absolute;left:12px;bottom:12px;background:rgba(20,22,28,.82);color:#fff;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;max-width:min(460px,calc(100% - 24px));z-index:2}
 #flash{position:absolute;inset:0;pointer-events:none;border:0 solid var(--warn);transition:border-width .15s}
@@ -48,7 +61,7 @@ table.t tr.cur td{color:var(--accent);font-weight:700}
 #labels span{position:absolute;transform:translate(-50%,-130%);font-size:11px;white-space:nowrap;background:rgba(10,12,18,.78);color:#fff;padding:2px 6px;border-radius:6px;border:1px solid #ffffff30}
 #labels span.side{background:none;border:0;color:#9fb3d9;font-weight:700;font-size:12px}
 @media (max-width:760px){#wrap{flex-direction:column}#view{height:58vh;flex:none}#side{width:auto;border-left:0;border-top:1px solid var(--line);flex:1;padding:12px 16px}#hud{font-size:12px}
-  #tabs{top:8px;left:8px;right:8px;gap:4px}#tabs button{padding:6px 9px;font-size:12px}#tabs a.game{padding:6px 9px;font-size:12px}#tabs .ex{display:none}}
+  #tabs{top:8px;left:8px;right:8px;gap:4px}#tabs button{padding:6px 9px;font-size:12px}#tabs a.game{padding:6px 9px;font-size:12px}#tabs .ex{display:none}#games{top:84px;left:8px;right:8px;max-height:calc(100% - 92px)}}
 </style>
 <div id="wrap">
   <div id="view">
@@ -60,7 +73,11 @@ table.t tr.cur td{color:var(--accent);font-weight:700}
       <button data-m="groom">⑤ 그루밍</button>
       <button data-m="gene">⑥ 유전자 조작</button>
       <button data-m="brain3d">⑦ 3D 뇌</button>
-      <a class="game" href="https://fruitfly.blueming.net/swatter/" target="_blank" rel="noopener">🪰 파리채 게임 ↗</a>
+      <a class="game" href="#" id="gamesBtn" role="button" aria-expanded="false">🎮 게임</a>
+    </div>
+    <div id="games" hidden>
+      <div class="ghead"><b>커넥톰 게임</b><span>같은 초파리 뇌 시뮬레이션으로 움직이는 게임</span><a href="#" id="gamesClose" aria-label="닫기">✕</a></div>
+      <div id="gameCards"></div>
     </div>
     <div id="labels"></div>
     <div id="hud"></div>
@@ -919,6 +936,25 @@ function loop(now){
   if (M.render) M.render(); else { controls.update(); renderer.render(scene, camera); }
   requestAnimationFrame(loop);
 }
+/* ================= 게임 메뉴 ================= */
+const GAMES = [
+  {id:'swatter', t:'🪰 커넥톰 파리채', d:'천천히 다가가야 잡힌다. 거대섬유가 문턱을 넘으면 파리가 도망친다.', b:'루밍 → 거대섬유', ready:true},
+  {id:'spider', t:'🕷️ 거미 대 초파리', d:'거미가 되어 몰래 다가가 덮친다. 뒤쪽과 잎 그늘을 이용한다.', b:'루밍 → 거대섬유', ready:false},
+  {id:'herd', t:'💡 초파리 몰이', d:'빛과 냄새로 초파리 떼를 출구까지 몰아가는 퍼즐.', b:'빛 → 같은 쪽 하강 뉴런 · 냄새 · 탈출', ready:false},
+  {id:'pet', t:'🍯 초파리 키우기', d:'먹이를 주고 먼지를 털어 주며 키운다. 뇌가 싫어하는 먹이는 안 먹는다.', b:'맛 → 섭식 운동뉴런 · 그루밍', ready:false},
+  {id:'hacker', t:'🧠 신경 해커', d:'뉴런을 골라 꺼서 초파리가 원하는 행동을 하게 만드는 퍼즐.', b:'뉴런 차단 · 전체 뇌 재시뮬레이션', ready:false}
+];
+(function(){
+  const panel = $('games'), btn = $('gamesBtn');
+  $('gameCards').innerHTML = GAMES.map(g => g.ready
+    ? `<a class="gcard" href="https://fruitfly.blueming.net/${g.id}/" target="_blank" rel="noopener"><span class="pill ok">플레이 ↗</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></a>`
+    : `<div class="gcard soon"><span class="pill">준비 중</span><span class="gt">${g.t}</span><span class="gd">${g.d}</span><span class="gb">쓰는 회로: ${g.b}</span></div>`).join('');
+  const show = on => { panel.hidden = !on; btn.setAttribute('aria-expanded', on); };
+  btn.onclick = e => { e.preventDefault(); show(panel.hidden); };
+  $('gamesClose').onclick = e => { e.preventDefault(); show(false); };
+  addEventListener('keydown', e => { if (e.key === 'Escape') show(false); });
+  try { if (location.hash === '#games') show(true); } catch(e){}
+})();
 window.__lab = { setMode, get M(){ return M; }, get mode(){ return mode; }, brain2, brainOdor, interp1, interp2, T, E, MODES, FEED_TH, GF_TH };
 resize(); setMode('escape'); requestAnimationFrame(loop);
 </script>
