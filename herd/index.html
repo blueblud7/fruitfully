@@ -1,0 +1,1468 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>초파리 몰이</title>
+<style>
+:root{
+  --bg:#0d1020; --ink:#f6f1e7; --dim:#b9b3c9; --panel:rgba(20,22,40,.86); --panel-solid:#1a1c33;
+  --line:rgba(255,255,255,.14); --accent:#ffc94a; --accent-ink:#2a1f00; --good:#7bd88f; --warn:#ff6b5a;
+  --l:#5aa9ff; --r:#ffb454; --odor:#ff6fb0; --gf:#ff6b5a; --chip:rgba(255,255,255,.08);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+#app{position:relative;width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none}
+#view{position:absolute;inset:0}
+#view canvas{display:block;width:100%;height:100%;touch-action:none}
+button{font:inherit;cursor:pointer;color:inherit}
+a{color:var(--accent)}
+
+/* 상단 바 */
+#top{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;align-items:stretch;z-index:3;pointer-events:none}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:12px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:0}
+.chip small{display:block;font-size:10px;color:var(--dim)}
+.chip b{font-size:16px}
+#lvChip{overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+#lvChip b{font-size:14px}
+#savedChip b.ok{color:var(--good)}
+#timeChip.low b{color:var(--warn)}
+#top .sp{flex:1 1 0}
+.tbtn{pointer-events:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;min-width:44px;min-height:40px;font-weight:700}
+.tbtn:active{transform:translateY(1px)}
+
+/* 도구 막대 */
+#tools{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;gap:6px;z-index:3;background:var(--panel);
+  border:1px solid var(--line);border-radius:16px;padding:6px;max-width:calc(100% - 16px)}
+.tool{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:58px;min-height:52px;
+  background:var(--chip);border:1px solid transparent;border-radius:12px;padding:4px 6px;font-size:11px;color:var(--dim)}
+.tool .ic{font-size:20px;line-height:1}
+.tool .n{position:absolute;top:-6px;right:-5px;background:var(--accent);color:var(--accent-ink);font-weight:900;font-size:11px;border-radius:999px;min-width:19px;height:19px;
+  display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--panel-solid)}
+.tool.sel{border-color:var(--accent);background:rgba(255,201,74,.16);color:var(--ink)}
+.tool.empty{opacity:.42}
+.tool.empty .n{background:#555;color:#ddd}
+#goBtn{position:absolute;left:50%;transform:translateX(-50%);bottom:84px;z-index:3;background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;
+  padding:12px 26px;font-size:17px;font-weight:900;min-height:48px;box-shadow:0 8px 30px #0009}
+#goBtn[hidden]{display:none}
+
+/* 뇌 패널 */
+#brain{position:absolute;right:8px;top:62px;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:14px;z-index:3;font-size:12px;overflow:hidden}
+#brainHd{display:flex;align-items:center;gap:6px;padding:8px 10px;cursor:pointer;min-height:36px}
+#brainHd strong{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#brainHd .st{font-size:11px;color:var(--accent);white-space:nowrap}
+#brainHd .tg{font-size:11px;color:var(--dim)}
+#brainBody{padding:0 10px 9px}
+#brain.collapsed #brainBody{display:none}
+.brow{display:grid;grid-template-columns:76px 1fr 1fr;gap:5px;align-items:center;margin:5px 0}
+.brow.one{grid-template-columns:76px 1fr 52px}
+.brow label{color:var(--dim);font-size:11px;line-height:1.15}
+.bar{position:relative;height:12px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px}
+.bar span{position:absolute;right:4px;top:-1px;font-size:10px;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 1px 2px #000}
+.bar.l i{background:var(--l)} .bar.r i{background:var(--r)} .bar.o i{background:var(--odor)} .bar.g i{background:var(--good)}
+.bar.g{overflow:visible}
+.bar .th{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;border-radius:1px}
+.bar.turn i{background:var(--accent)}
+.bar.turn .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#fff8}
+.val{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:11px}
+#bNote{color:var(--dim);font-size:11px;margin-top:6px;line-height:1.45}
+#brainToggle{margin-top:7px;width:100%;background:var(--chip);border:1px solid var(--line);border-radius:9px;padding:7px;font-size:12px;min-height:34px}
+#brainToggle.off{background:rgba(255,107,90,.18);border-color:var(--warn)}
+
+/* 알림 */
+#toast{position:absolute;left:50%;top:64px;transform:translateX(-50%);z-index:6;background:var(--panel-solid);border:1px solid var(--line);border-radius:999px;
+  padding:7px 14px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 24px);text-align:center}
+#toast.on{opacity:1}
+#tipBar{position:absolute;left:8px;top:60px;max-width:min(420px,calc(100% - 316px));z-index:3;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:8px 11px;font-size:12.5px;line-height:1.5;color:var(--dim);pointer-events:none}
+#tipBar b{color:var(--ink)}
+#tipBar[hidden]{display:none}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:15px;color:#fff;text-shadow:0 2px 0 #000a,0 0 8px #000a;white-space:nowrap;
+  animation:up 1.1s ease-out forwards}
+.pop.good{color:#c6ffd2;font-size:18px} .pop.bad{color:#ffc2b8} .pop.jump{color:#ffe28a;font-size:13px}
+@keyframes up{0%{opacity:0;margin-top:6px}15%{opacity:1}100%{opacity:0;margin-top:-34px}}
+
+/* 오버레이 */
+.ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10;background:rgba(6,7,16,.6);backdrop-filter:blur(3px)}
+.ov[hidden]{display:none}
+.card{width:100%;max-width:560px;max-height:100%;overflow:auto;background:var(--panel-solid);border:1px solid var(--line);border-radius:18px;padding:20px 18px;box-shadow:0 20px 60px #000a}
+.card h1{font-size:28px;font-weight:900;letter-spacing:-.01em}
+.card h1 em{font-style:normal;color:var(--accent)}
+.card h2{font-size:22px;font-weight:900}
+.card .lead{margin-top:8px;color:var(--dim);font-size:14px;line-height:1.6}
+.card .lead b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.lvb{position:relative;background:var(--chip);border:1px solid var(--line);border-radius:12px;padding:9px 4px 7px;min-height:64px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.lvb .num{font-size:19px;font-weight:900}
+.lvb .nm{font-size:10.5px;color:var(--dim);line-height:1.2;text-align:center;word-break:keep-all}
+.lvb .stars{font-size:11px;letter-spacing:1px;color:var(--accent)}
+.lvb.locked{opacity:.38;cursor:not-allowed}
+.lvb.done{border-color:rgba(123,216,143,.5)}
+details{margin-top:14px;background:#ffffff0a;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+details summary{cursor:pointer;font-size:13.5px;font-weight:700}
+details p,details li{margin-top:8px;font-size:12.5px;line-height:1.65;color:var(--dim)}
+details ul{padding-left:18px}
+details b{color:var(--ink)}
+.row{display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.big{background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:12px 20px;font-size:16px;font-weight:900;min-height:48px}
+.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-size:14px;min-height:48px;text-decoration:none;display:inline-flex;align-items:center}
+.exit{font-size:13px;color:var(--dim);text-decoration:none;display:inline-flex;align-items:center;min-height:40px}
+.exit:hover{color:var(--ink)}
+.stack{display:grid;gap:8px;margin-top:16px}
+.stack .big,.stack .ghost{width:100%;justify-content:center}
+.toolsList{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.toolsList span{background:var(--chip);border-radius:999px;padding:4px 10px;font-size:12.5px}
+.res{margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.res div{background:#ffffff0d;border-radius:10px;padding:8px;text-align:center;font-size:11px;color:var(--dim)}
+.res b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.bigStars{font-size:34px;letter-spacing:4px;margin-top:6px;color:var(--accent)}
+.bigStars .off{color:#ffffff2a}
+.ctrl{margin-top:12px;background:#ffffff0a;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.55;color:var(--dim)}
+.ctrl b{color:var(--ink)}
+.meta{font-size:11.5px;color:var(--dim);margin-top:12px;line-height:1.5}
+@media (max-width:640px){
+  #brain{left:8px;right:8px;width:auto;top:auto;bottom:80px}
+  #tipBar{max-width:none;right:8px;top:58px}
+  .chip{padding:4px 7px}.chip b{font-size:14px}.chip small{font-size:9.5px}
+  #lvChip b{font-size:12.5px}
+  .tool{min-width:50px;padding:4px 4px}
+  .grid{grid-template-columns:repeat(3,1fr)}
+  .card{padding:18px 15px}.card h1{font-size:24px}
+}
+@media (max-width:480px){ #pauseBtn .lb{display:none} }
+@media (max-width:380px){ .tool{min-width:44px} .tool .lb{display:none} }
+</style>
+<div id="app">
+  <div id="view"></div>
+  <div id="fx"></div>
+  <div id="top">
+    <div class="chip" id="lvChip"><small id="lvNum">레벨 1</small><b id="lvName">-</b></div>
+    <div class="chip" id="savedChip"><small>구출 / 목표 <span id="goalTxt">50%</span></small><b id="savedTxt">0/0</b></div>
+    <div class="chip" id="timeChip"><small>남은 시간</small><b id="timeTxt">0</b></div>
+    <div class="sp"></div>
+    <button class="tbtn" id="speedBtn" aria-label="빠르기">×1</button>
+    <button class="tbtn" id="pauseBtn" aria-label="일시정지">❚❚<span class="lb"> 일시정지</span></button>
+  </div>
+  <div id="tipBar" hidden></div>
+  <div id="brain">
+    <div id="brainHd" role="button" aria-label="뇌 패널 접기/펴기"><strong id="bTitle">초파리의 뇌</strong><span class="st" id="bState">-</span><span class="tg" id="bFold">▾</span></div>
+    <div id="brainBody">
+      <div class="brow"><label>빛 입력<br>Tm3 (왼·오)</label><div class="bar l"><i id="bInL"></i><span id="vInL"></span></div><div class="bar r"><i id="bInR"></i><span id="vInR"></span></div></div>
+      <div class="brow"><label title="DNp07 + DNb05 + DNbe001">하강 뉴런 합<br>(DNp07 외 2)</label><div class="bar l"><i id="bSL"></i><span id="vSL"></span></div><div class="bar r"><i id="bSR"></i><span id="vSR"></span></div></div>
+      <div class="brow one"><label>회전</label><div class="bar turn"><span class="mid"></span><i id="bTurn"></i></div><span class="val" id="vTurn">-</span></div>
+      <div class="brow one"><label>냄새 수용<br>뉴런 ORN</label><div class="bar o"><i id="bOdor"></i></div><span class="val" id="vOdor">0</span></div>
+      <div class="brow one"><label>거대섬유<br>DNp01 (탈출)</label><div class="bar g"><i id="bGF"></i><span class="th" id="bTh"></span></div><span class="val" id="vGF">0</span></div>
+      <div id="bNote">초파리를 누르면 그 초파리의 뇌를 봅니다.</div>
+      <button id="brainToggle">🧠 뇌 켜짐 — 눌러서 끄기 (대조 실험)</button>
+    </div>
+  </div>
+  <button id="goBtn" hidden>▶ 출발!</button>
+  <div id="tools"></div>
+  <div id="toast"></div>
+
+  <!-- 처음 화면 + 레벨 선택 -->
+  <div class="ov" id="menuOv">
+    <div class="card">
+      <h1>초파리 <em>몰이</em></h1>
+      <p class="lead">비 온 뒤라 날개가 젖은 초파리들이 걸어서만 움직입니다. 직접 조종할 수는 없어요. <b>등불·가림막·과일 미끼·깜짝 손</b>을 놓아 무리를 병으로 데려가세요.
+        초파리가 빛 쪽으로 몸을 트는 방향과 세기는 <b>실제 초파리 뇌 배선도(커넥톰)</b> 시뮬레이션에서 나옵니다.</p>
+      <div class="grid" id="lvGrid"></div>
+      <details>
+        <summary>어떻게 작동하나요? (정직한 설명)</summary>
+        <p id="metaLine"></p>
+        <p><b>뇌가 정하는 것</b></p>
+        <ul>
+          <li><b>빛 쪽으로 돌기:</b> 두 눈(머리 방향 ±0.9rad)에 들어오는 빛 세기를 시각 ON 경로 뉴런 <b>Tm3</b>의 입력(0~100Hz)으로 넣고, 전체 뇌 시뮬레이션으로 미리 계산한 반응표에서 하강 뉴런 <b>DNp07·DNb05·DNbe001</b>의 좌우 발화율을 읽습니다. 이 뉴런들은 빛이 들어온 <b>같은 쪽</b>에서 켜집니다. 초파리는 (왼쪽 합 − 오른쪽 합)만큼 몸을 틉니다. 방향도 세기도 반응표가 정합니다.</li>
+          <li><b>과일 냄새:</b> 냄새 수용 뉴런(ORN) 발화율 → 하강 뉴런 전체 발화 합. 합이 세지면 곧게 서둘러 걷고, 약해지면 방향을 바꾸고, 거의 최대(포화)면 머물며 먹습니다. 냄새는 좌우 차이가 거의 없어서 방향은 뇌가 알려주지 않습니다 — 그래서 「세기 변화」만 씁니다.</li>
+          <li><b>깜짝 손:</b> 내려오는 손이 눈에서 커지는 속도(루밍)를 LPLC2·LC4 입력으로 넣고, <b>거대섬유(DNp01) 발화율이 45Hz를 넘는 초파리만</b> 점프합니다. 옆 방향은 위협 쪽에서 켜지는 DNp04의 좌우 차이로 고릅니다. 멀리 있어 거대섬유가 문턱을 못 넘으면 뛰지 않습니다.</li>
+        </ul>
+        <p><b>손으로 만든 것</b></p>
+        <ul>
+          <li>걷기·점프 물리, 회전 이득과 무작위 흔들림, 벽에서 튕기기. 「센 쪽으로 돈다」는 몸 쪽 연결도 가정입니다.</li>
+          <li>눈별 빛 공식(140·cos^1.5 / (1 + 거리²/60)), 벽·가림막이 빛을 막는 그림자, 냄새가 길을 따라 9칸 퍼지는 규칙, 미끼 수명 25초, 손 크기·속도, 탈출 문턱 45Hz.</li>
+          <li>물·거미줄·구멍·울타리, 병에 들어가면 구출되는 규칙, 레벨과 별 기준.</li>
+          <li>반응표는 300ms 정상상태 발화율입니다. 빛·냄새·루밍은 따로 시뮬레이션한 표라서, 동시에 받을 때의 상호작용은 반영되지 않습니다.</li>
+        </ul>
+        <p><b>확인해 보기:</b> 뇌 패널의 「뇌 끄기」를 누르면 같은 몸으로 무작위로만 걷습니다. 결과 화면은 <b>같은 배치·같은 무작위 씨앗으로 뇌를 끈 대조 실험</b> 결과도 함께 보여 줍니다.</p>
+      </details>
+      <div class="row"><a class="exit" href="https://fruitfly.blueming.net/">← 실험실로</a></div>
+    </div>
+  </div>
+
+  <!-- 레벨 소개 -->
+  <div class="ov" id="introOv" hidden>
+    <div class="card">
+      <small class="lead" id="inNum" style="margin:0">레벨 1</small>
+      <h2 id="inName">-</h2>
+      <p class="lead" id="inTip"></p>
+      <p class="lead">목표: 초파리 <b id="inFlies">0</b>마리 중 <b id="inGoal">50%</b> 이상 구출 · ★★ <b id="inGoal2">75%</b> · ★★★ 그리고 도구 <b id="inPar">1</b>개 이하</p>
+      <div class="toolsList" id="inTools"></div>
+      <div class="row"><button class="big" id="inGo">준비하기</button><button class="ghost" id="inBack">레벨 선택</button></div>
+    </div>
+  </div>
+
+  <!-- 결과 -->
+  <div class="ov" id="resOv" hidden>
+    <div class="card">
+      <h2 id="rTitle">-</h2>
+      <div class="bigStars" id="rStars"></div>
+      <p class="lead" id="rLead"></p>
+      <div class="res">
+        <div><b id="rPct">0%</b>구출</div>
+        <div><b id="rUsed">0</b>쓴 도구 (기준 <span id="rPar">0</span>)</div>
+        <div><b id="rBest">0%</b>최고 기록</div>
+      </div>
+      <div class="ctrl" id="rCtrl">대조 실험 계산 중…</div>
+      <div class="row"><button class="big" id="rNext">다음 레벨</button><button class="ghost" id="rAgain">다시 하기</button><button class="ghost" id="rMenu">레벨 선택</button></div>
+    </div>
+  </div>
+
+  <!-- 일시정지 -->
+  <div class="ov" id="pauseOv" hidden>
+    <div class="card" style="max-width:380px">
+      <h2>일시정지</h2>
+      <p class="lead">시간이 멈춰 있습니다. Esc 또는 P로도 계속할 수 있어요.</p>
+      <div class="stack">
+        <button class="big" id="pResume">계속하기</button>
+        <button class="ghost" id="pRestart">처음부터 다시 (현재 레벨)</button>
+        <button class="ghost" id="pMenu">레벨 선택</button>
+        <button class="ghost" id="pMute">소리 켬</button>
+        <a class="ghost exit" href="https://fruitfly.blueming.net/">← 실험실로 나가기</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="vendor/three.min.js"></script>
+<script>
+'use strict';
+const T = {"levels2d":[0,15,30,50,75,100],"readouts":["DNp01_L","DNp01_R","DNp04_L","DNp04_R","DNp07_L","DNp07_R","DNb05_L","DNb05_R","DNbe001_L","DNbe001_R","DNa02_L","DNa02_R","DNg13_L","DNg13_R","DNp18_L","DNp18_R","DNg56_L","DNg56_R"],"light":{"0,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,15":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":3.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,30":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":20.0,"DNb05_L":3.33,"DNb05_R":23.33,"DNbe001_L":0.0,"DNbe001_R":13.33,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":13.33,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":16.67},"0,50":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":53.33,"DNb05_L":0.0,"DNb05_R":43.33,"DNbe001_L":0.0,"DNbe001_R":40.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":33.33},"0,75":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":83.33,"DNb05_L":0.0,"DNb05_R":56.67,"DNbe001_L":6.67,"DNbe001_R":83.33,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":26.67,"DNg56_L":0.0,"DNg56_R":43.33},"0,100":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":103.33,"DNb05_L":6.67,"DNb05_R":86.67,"DNbe001_L":16.67,"DNbe001_R":110.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":6.67,"DNp18_L":16.67,"DNp18_R":46.67,"DNg56_L":3.33,"DNg56_R":56.67},"15,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.67,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,15":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":3.33,"DNb05_R":0.0,"DNbe001_L":6.67,"DNbe001_R":10.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":6.67,"DNg13_R":3.33,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":13.33},"15,30":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":20.0,"DNb05_L":6.67,"DNb05_R":20.0,"DNbe001_L":3.33,"DNbe001_R":16.67,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":3.33,"DNg56_R":30.0},"15,50":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":53.33,"DNb05_L":6.67,"DNb05_R":43.33,"DNbe001_L":23.33,"DNbe001_R":63.33,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":6.67,"DNp18_L":10.0,"DNp18_R":13.33,"DNg56_L":13.33,"DNg56_R":40.0},"15,75":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":76.67,"DNb05_L":3.33,"DNb05_R":66.67,"DNbe001_L":20.0,"DNbe001_R":86.67,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":10.0,"DNp18_L":13.33,"DNp18_R":26.67,"DNg56_L":16.67,"DNg56_R":56.67},"15,100":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":96.67,"DNb05_L":3.33,"DNb05_R":86.67,"DNbe001_L":20.0,"DNbe001_R":100.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":10.0,"DNp18_L":16.67,"DNp18_R":36.67,"DNg56_L":16.67,"DNg56_R":63.33},"30,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":43.33,"DNp07_R":0.0,"DNb05_L":26.67,"DNb05_R":0.0,"DNbe001_L":23.33,"DNbe001_R":0.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":6.67,"DNp18_L":6.67,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,15":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":40.0,"DNp07_R":0.0,"DNb05_L":20.0,"DNb05_R":0.0,"DNbe001_L":26.67,"DNbe001_R":16.67,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":6.67,"DNg13_R":3.33,"DNp18_L":10.0,"DNp18_R":3.33,"DNg56_L":13.33,"DNg56_R":20.0},"30,30":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":40.0,"DNp07_R":23.33,"DNb05_L":23.33,"DNb05_R":23.33,"DNbe001_L":40.0,"DNbe001_R":43.33,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":6.67,"DNp18_L":10.0,"DNp18_R":16.67,"DNg56_L":20.0,"DNg56_R":36.67},"30,50":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":36.67,"DNp07_R":46.67,"DNb05_L":16.67,"DNb05_R":40.0,"DNbe001_L":43.33,"DNbe001_R":70.0,"DNa02_L":6.67,"DNa02_R":0.0,"DNg13_L":6.67,"DNg13_R":0.0,"DNp18_L":16.67,"DNp18_R":23.33,"DNg56_L":20.0,"DNg56_R":50.0},"30,75":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":36.67,"DNp07_R":80.0,"DNb05_L":23.33,"DNb05_R":66.67,"DNbe001_L":33.33,"DNbe001_R":83.33,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":3.33,"DNp18_L":13.33,"DNp18_R":30.0,"DNg56_L":30.0,"DNg56_R":56.67},"30,100":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":40.0,"DNp07_R":100.0,"DNb05_L":20.0,"DNb05_R":96.67,"DNbe001_L":33.33,"DNbe001_R":86.67,"DNa02_L":3.33,"DNa02_R":3.33,"DNg13_L":6.67,"DNg13_R":10.0,"DNp18_L":13.33,"DNp18_R":36.67,"DNg56_L":30.0,"DNg56_R":70.0},"50,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":86.67,"DNp07_R":0.0,"DNb05_L":53.33,"DNb05_R":0.0,"DNbe001_L":46.67,"DNbe001_R":10.0,"DNa02_L":10.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":3.33,"DNp18_L":3.33,"DNp18_R":0.0,"DNg56_L":13.33,"DNg56_R":0.0},"50,15":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":76.67,"DNp07_R":3.33,"DNb05_L":53.33,"DNb05_R":0.0,"DNbe001_L":70.0,"DNbe001_R":43.33,"DNa02_L":26.67,"DNa02_R":0.0,"DNg13_L":13.33,"DNg13_R":3.33,"DNp18_L":23.33,"DNp18_R":16.67,"DNg56_L":20.0,"DNg56_R":30.0},"50,30":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":70.0,"DNp07_R":20.0,"DNb05_L":56.67,"DNb05_R":23.33,"DNbe001_L":60.0,"DNbe001_R":43.33,"DNa02_L":10.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":6.67,"DNp18_L":16.67,"DNp18_R":16.67,"DNg56_L":33.33,"DNg56_R":46.67},"50,50":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":80.0,"DNp07_R":60.0,"DNb05_L":60.0,"DNb05_R":46.67,"DNbe001_L":56.67,"DNbe001_R":70.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":6.67,"DNg13_R":10.0,"DNp18_L":23.33,"DNp18_R":30.0,"DNg56_L":33.33,"DNg56_R":56.67},"50,75":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":80.0,"DNp07_R":86.67,"DNb05_L":56.67,"DNb05_R":76.67,"DNbe001_L":53.33,"DNbe001_R":90.0,"DNa02_L":10.0,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":13.33,"DNp18_L":16.67,"DNp18_R":36.67,"DNg56_L":40.0,"DNg56_R":70.0},"50,100":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":83.33,"DNp07_R":106.67,"DNb05_L":46.67,"DNb05_R":100.0,"DNbe001_L":53.33,"DNbe001_R":103.33,"DNa02_L":16.67,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":6.67,"DNp18_L":20.0,"DNp18_R":43.33,"DNg56_L":40.0,"DNg56_R":70.0},"75,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":100.0,"DNp07_R":0.0,"DNb05_L":70.0,"DNb05_R":0.0,"DNbe001_L":73.33,"DNbe001_R":23.33,"DNa02_L":6.67,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":6.67,"DNp18_L":20.0,"DNp18_R":10.0,"DNg56_L":20.0,"DNg56_R":13.33},"75,15":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":93.33,"DNp07_R":0.0,"DNb05_L":80.0,"DNb05_R":6.67,"DNbe001_L":80.0,"DNbe001_R":36.67,"DNa02_L":16.67,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":10.0,"DNp18_L":23.33,"DNp18_R":16.67,"DNg56_L":33.33,"DNg56_R":33.33},"75,30":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":90.0,"DNp07_R":20.0,"DNb05_L":80.0,"DNb05_R":26.67,"DNbe001_L":80.0,"DNbe001_R":46.67,"DNa02_L":23.33,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":10.0,"DNp18_L":23.33,"DNp18_R":23.33,"DNg56_L":40.0,"DNg56_R":46.67},"75,50":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":90.0,"DNp07_R":50.0,"DNb05_L":93.33,"DNb05_R":50.0,"DNbe001_L":73.33,"DNbe001_R":63.33,"DNa02_L":20.0,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":6.67,"DNp18_L":26.67,"DNp18_R":30.0,"DNg56_L":43.33,"DNg56_R":60.0},"75,75":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":100.0,"DNp07_R":80.0,"DNb05_L":86.67,"DNb05_R":73.33,"DNbe001_L":73.33,"DNbe001_R":76.67,"DNa02_L":16.67,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":16.67,"DNp18_L":20.0,"DNp18_R":36.67,"DNg56_L":50.0,"DNg56_R":70.0},"75,100":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":113.33,"DNp07_R":110.0,"DNb05_L":90.0,"DNb05_R":93.33,"DNbe001_L":70.0,"DNbe001_R":93.33,"DNa02_L":6.67,"DNa02_R":0.0,"DNg13_L":6.67,"DNg13_R":13.33,"DNp18_L":23.33,"DNp18_R":46.67,"DNg56_L":50.0,"DNg56_R":73.33},"100,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":120.0,"DNp07_R":0.0,"DNb05_L":103.33,"DNb05_R":0.0,"DNbe001_L":93.33,"DNbe001_R":26.67,"DNa02_L":26.67,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":3.33,"DNp18_L":30.0,"DNp18_R":16.67,"DNg56_L":33.33,"DNg56_R":16.67},"100,15":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":120.0,"DNp07_R":6.67,"DNb05_L":103.33,"DNb05_R":3.33,"DNbe001_L":103.33,"DNbe001_R":40.0,"DNa02_L":13.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":36.67,"DNp18_R":23.33,"DNg56_L":40.0,"DNg56_R":36.67},"100,30":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":123.33,"DNp07_R":33.33,"DNb05_L":106.67,"DNb05_R":30.0,"DNbe001_L":96.67,"DNbe001_R":53.33,"DNa02_L":26.67,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":6.67,"DNp18_L":33.33,"DNp18_R":26.67,"DNg56_L":46.67,"DNg56_R":50.0},"100,50":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":113.33,"DNp07_R":56.67,"DNb05_L":110.0,"DNb05_R":46.67,"DNbe001_L":83.33,"DNbe001_R":70.0,"DNa02_L":30.0,"DNa02_R":0.0,"DNg13_L":6.67,"DNg13_R":10.0,"DNp18_L":23.33,"DNp18_R":30.0,"DNg56_L":50.0,"DNg56_R":60.0},"100,75":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":110.0,"DNp07_R":80.0,"DNb05_L":103.33,"DNb05_R":70.0,"DNbe001_L":80.0,"DNbe001_R":86.67,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":3.33,"DNg13_R":16.67,"DNp18_L":23.33,"DNp18_R":30.0,"DNg56_L":53.33,"DNg56_R":70.0},"100,100":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":123.33,"DNp07_R":106.67,"DNb05_L":103.33,"DNb05_R":96.67,"DNbe001_L":76.67,"DNbe001_R":90.0,"DNa02_L":16.67,"DNa02_R":0.0,"DNg13_L":10.0,"DNg13_R":16.67,"DNp18_L":26.67,"DNp18_R":40.0,"DNg56_L":56.67,"DNg56_R":76.67}},"loom":{"0,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,15":{"DNp01_L":10.0,"DNp01_R":16.67,"DNp04_L":0.0,"DNp04_R":56.67,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,30":{"DNp01_L":20.0,"DNp01_R":40.0,"DNp04_L":0.0,"DNp04_R":103.33,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.67,"DNb05_R":3.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,50":{"DNp01_L":33.33,"DNp01_R":70.0,"DNp04_L":0.0,"DNp04_R":143.33,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":13.33,"DNb05_R":3.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":3.33,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,75":{"DNp01_L":80.0,"DNp01_R":120.0,"DNp04_L":0.0,"DNp04_R":183.33,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":30.0,"DNb05_R":23.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":23.33,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0,100":{"DNp01_L":96.67,"DNp01_R":160.0,"DNp04_L":0.0,"DNp04_R":213.33,"DNp07_L":0.0,"DNp07_R":6.67,"DNb05_L":30.0,"DNb05_R":36.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":26.67,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":36.67,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":80.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,15":{"DNp01_L":10.0,"DNp01_R":33.33,"DNp04_L":73.33,"DNp04_R":46.67,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,30":{"DNp01_L":30.0,"DNp01_R":43.33,"DNp04_L":63.33,"DNp04_R":96.67,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.67,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,50":{"DNp01_L":50.0,"DNp01_R":80.0,"DNp04_L":56.67,"DNp04_R":136.67,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":23.33,"DNb05_R":10.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,75":{"DNp01_L":73.33,"DNp01_R":123.33,"DNp04_L":46.67,"DNp04_R":180.0,"DNp07_L":0.0,"DNp07_R":3.33,"DNb05_L":30.0,"DNb05_R":23.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":20.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"15,100":{"DNp01_L":100.0,"DNp01_R":166.67,"DNp04_L":43.33,"DNp04_R":216.67,"DNp07_L":0.0,"DNp07_R":3.33,"DNb05_L":33.33,"DNb05_R":33.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":23.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":33.33,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,0":{"DNp01_L":23.33,"DNp01_R":23.33,"DNp04_L":123.33,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":3.33,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,15":{"DNp01_L":16.67,"DNp01_R":56.67,"DNp04_L":120.0,"DNp04_R":33.33,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,30":{"DNp01_L":33.33,"DNp01_R":70.0,"DNp04_L":120.0,"DNp04_R":83.33,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":13.33,"DNb05_R":6.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,50":{"DNp01_L":43.33,"DNp01_R":83.33,"DNp04_L":106.67,"DNp04_R":130.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":20.0,"DNb05_R":16.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,75":{"DNp01_L":66.67,"DNp01_R":136.67,"DNp04_L":106.67,"DNp04_R":173.33,"DNp07_L":0.0,"DNp07_R":6.67,"DNb05_L":30.0,"DNb05_R":26.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":10.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"30,100":{"DNp01_L":116.67,"DNp01_R":166.67,"DNp04_L":100.0,"DNp04_R":210.0,"DNp07_L":0.0,"DNp07_R":10.0,"DNb05_L":26.67,"DNb05_R":40.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":23.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":30.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,0":{"DNp01_L":43.33,"DNp01_R":56.67,"DNp04_L":173.33,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":10.0,"DNb05_R":6.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":10.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":10.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,15":{"DNp01_L":40.0,"DNp01_R":83.33,"DNp04_L":170.0,"DNp04_R":10.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":6.67,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":6.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":6.67,"DNg56_L":0.0,"DNg56_R":0.0},"50,30":{"DNp01_L":46.67,"DNp01_R":103.33,"DNp04_L":170.0,"DNp04_R":66.67,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":16.67,"DNb05_R":6.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":3.33,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":6.67,"DNg56_L":0.0,"DNg56_R":0.0},"50,50":{"DNp01_L":50.0,"DNp01_R":106.67,"DNp04_L":166.67,"DNp04_R":116.67,"DNp07_L":0.0,"DNp07_R":10.0,"DNb05_L":23.33,"DNb05_R":16.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.33,"DNa02_R":3.33,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,75":{"DNp01_L":70.0,"DNp01_R":136.67,"DNp04_L":156.67,"DNp04_R":166.67,"DNp07_L":0.0,"DNp07_R":16.67,"DNb05_L":36.67,"DNb05_R":30.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"50,100":{"DNp01_L":93.33,"DNp01_R":170.0,"DNp04_L":160.0,"DNp04_R":196.67,"DNp07_L":0.0,"DNp07_R":20.0,"DNb05_L":36.67,"DNb05_R":33.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":26.67,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":13.33,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"75,0":{"DNp01_L":96.67,"DNp01_R":103.33,"DNp04_L":213.33,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":26.67,"DNb05_R":23.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":23.33,"DNg56_L":0.0,"DNg56_R":0.0},"75,15":{"DNp01_L":96.67,"DNp01_R":120.0,"DNp04_L":213.33,"DNp04_R":3.33,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":23.33,"DNb05_R":26.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":23.33,"DNg56_L":0.0,"DNg56_R":0.0},"75,30":{"DNp01_L":103.33,"DNp01_R":123.33,"DNp04_L":206.67,"DNp04_R":50.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":23.33,"DNb05_R":20.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":13.33,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":20.0,"DNg56_L":0.0,"DNg56_R":0.0},"75,50":{"DNp01_L":96.67,"DNp01_R":123.33,"DNp04_L":210.0,"DNp04_R":106.67,"DNp07_L":0.0,"DNp07_R":10.0,"DNb05_L":30.0,"DNb05_R":23.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":10.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":10.0,"DNg56_L":0.0,"DNg56_R":0.0},"75,75":{"DNp01_L":110.0,"DNp01_R":133.33,"DNp04_L":203.33,"DNp04_R":156.67,"DNp07_L":0.0,"DNp07_R":23.33,"DNb05_L":40.0,"DNb05_R":26.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":6.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":3.33,"DNg56_L":0.0,"DNg56_R":0.0},"75,100":{"DNp01_L":120.0,"DNp01_R":180.0,"DNp04_L":203.33,"DNp04_R":196.67,"DNp07_L":0.0,"DNp07_R":26.67,"DNb05_L":33.33,"DNb05_R":30.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":13.33,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":3.33,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"100,0":{"DNp01_L":133.33,"DNp01_R":113.33,"DNp04_L":246.67,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":30.0,"DNb05_R":23.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":33.33,"DNg56_L":0.0,"DNg56_R":0.0},"100,15":{"DNp01_L":120.0,"DNp01_R":126.67,"DNp04_L":243.33,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":30.0,"DNb05_R":30.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":20.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":33.33,"DNg56_L":0.0,"DNg56_R":0.0},"100,30":{"DNp01_L":130.0,"DNp01_R":140.0,"DNp04_L":243.33,"DNp04_R":40.0,"DNp07_L":0.0,"DNp07_R":3.33,"DNb05_L":30.0,"DNb05_R":26.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":23.33,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":30.0,"DNg56_L":0.0,"DNg56_R":0.0},"100,50":{"DNp01_L":130.0,"DNp01_R":136.67,"DNp04_L":236.67,"DNp04_R":96.67,"DNp07_L":0.0,"DNp07_R":13.33,"DNb05_L":36.67,"DNb05_R":33.33,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":16.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":30.0,"DNg56_L":0.0,"DNg56_R":0.0},"100,75":{"DNp01_L":140.0,"DNp01_R":150.0,"DNp04_L":236.67,"DNp04_R":153.33,"DNp07_L":0.0,"DNp07_R":23.33,"DNb05_L":23.33,"DNb05_R":36.67,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":6.67,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":16.67,"DNg56_L":0.0,"DNg56_R":0.0},"100,100":{"DNp01_L":143.33,"DNp01_R":180.0,"DNp04_L":233.33,"DNp04_R":186.67,"DNp07_L":0.0,"DNp07_R":26.67,"DNb05_L":33.33,"DNb05_R":40.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":3.33,"DNa02_R":3.33,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":10.0,"DNg56_L":0.0,"DNg56_R":0.0}},"odor":{"0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0.2":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0.3":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0.4":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.0,"DNp07_R":0.0,"DNb05_L":0.0,"DNb05_R":0.0,"DNbe001_L":0.0,"DNbe001_R":0.0,"DNa02_L":0.0,"DNa02_R":0.0,"DNg13_L":0.0,"DNg13_R":0.0,"DNp18_L":0.0,"DNp18_R":0.0,"DNg56_L":0.0,"DNg56_R":0.0},"0.5":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":0.42,"DNp07_R":0.0,"DNb05_L":27.08,"DNb05_R":23.33,"DNbe001_L":2.5,"DNbe001_R":5.0,"DNa02_L":6.25,"DNa02_R":0.0,"DNg13_L":9.58,"DNg13_R":5.42,"DNp18_L":4.17,"DNp18_R":5.42,"DNg56_L":7.5,"DNg56_R":10.42},"0.6":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":1.25,"DNp07_R":0.0,"DNb05_L":68.75,"DNb05_R":57.08,"DNbe001_L":5.83,"DNbe001_R":11.67,"DNa02_L":15.0,"DNa02_R":0.0,"DNg13_L":22.5,"DNg13_R":12.5,"DNp18_L":10.42,"DNp18_R":12.08,"DNg56_L":18.33,"DNg56_R":25.0},"0.7":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":2.5,"DNp07_R":0.0,"DNb05_L":137.08,"DNb05_R":117.92,"DNbe001_L":12.08,"DNbe001_R":25.0,"DNa02_L":28.33,"DNa02_R":0.0,"DNg13_L":47.08,"DNg13_R":23.75,"DNp18_L":19.17,"DNp18_R":25.42,"DNg56_L":38.75,"DNg56_R":51.25},"0.8":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":3.33,"DNp07_R":0.42,"DNb05_L":214.58,"DNb05_R":190.0,"DNbe001_L":18.33,"DNbe001_R":37.92,"DNa02_L":46.67,"DNa02_R":0.0,"DNg13_L":77.5,"DNg13_R":37.92,"DNp18_L":34.17,"DNp18_R":40.42,"DNg56_L":62.08,"DNg56_R":82.92},"0.9":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":2.92,"DNp07_R":0.0,"DNb05_L":217.92,"DNb05_R":192.92,"DNbe001_L":19.58,"DNbe001_R":40.0,"DNa02_L":46.67,"DNa02_R":0.0,"DNg13_L":76.25,"DNg13_R":42.92,"DNp18_L":33.33,"DNp18_R":41.67,"DNg56_L":63.33,"DNg56_R":84.17},"1.0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":2.92,"DNp07_R":0.0,"DNb05_L":241.67,"DNb05_R":212.92,"DNbe001_L":20.0,"DNbe001_R":45.42,"DNa02_L":50.83,"DNa02_R":0.0,"DNg13_L":84.58,"DNg13_R":45.0,"DNp18_L":35.42,"DNp18_R":45.83,"DNg56_L":70.83,"DNg56_R":93.33},"1.1":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":2.92,"DNp07_R":0.0,"DNb05_L":262.08,"DNb05_R":230.42,"DNbe001_L":22.08,"DNbe001_R":46.67,"DNa02_L":53.75,"DNa02_R":0.0,"DNg13_L":92.5,"DNg13_R":47.5,"DNp18_L":39.58,"DNp18_R":50.42,"DNg56_L":76.25,"DNg56_R":101.67},"1.2":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":3.33,"DNp07_R":0.0,"DNb05_L":264.58,"DNb05_R":232.92,"DNbe001_L":23.75,"DNbe001_R":46.25,"DNa02_L":55.0,"DNa02_R":0.0,"DNg13_L":94.17,"DNg13_R":51.67,"DNp18_L":39.58,"DNp18_R":50.42,"DNg56_L":76.67,"DNg56_R":103.33},"1.4":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":3.33,"DNp07_R":0.0,"DNb05_L":265.42,"DNb05_R":233.75,"DNbe001_L":24.58,"DNbe001_R":46.67,"DNa02_L":54.58,"DNa02_R":0.0,"DNg13_L":97.08,"DNg13_R":50.42,"DNp18_L":40.83,"DNp18_R":51.25,"DNg56_L":77.08,"DNg56_R":102.08},"1.6":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":3.33,"DNp07_R":0.0,"DNb05_L":269.58,"DNb05_R":237.08,"DNbe001_L":22.08,"DNbe001_R":47.92,"DNa02_L":57.92,"DNa02_R":0.0,"DNg13_L":98.75,"DNg13_R":52.92,"DNp18_L":39.17,"DNp18_R":53.75,"DNg56_L":78.75,"DNg56_R":105.0},"2.0":{"DNp01_L":0.0,"DNp01_R":0.0,"DNp04_L":0.0,"DNp04_R":0.0,"DNp07_L":3.33,"DNp07_R":0.0,"DNb05_L":298.75,"DNb05_R":263.33,"DNbe001_L":26.25,"DNbe001_R":54.17,"DNa02_L":62.92,"DNa02_R":0.0,"DNg13_L":108.33,"DNg13_R":53.75,"DNp18_L":45.83,"DNp18_R":59.17,"DNg56_L":87.08,"DNg56_R":117.08}},"odor_levels":[0,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.4,1.6,2.0],"meta":{"connectome":"FlyWire 783 (philshiu/Drosophila_brain_model)","neurons":138639,"synapse_rows":15091983,"model":"LIF, Shiu et al. 2024 params","sim_ms":300,"inputs":{"loom":"LPLC2+LC4 per side","light":"Tm3 (ON pathway) per side","odor":"ORN DM1/DM4/DM2/VM2/VA2 both sides; uniform rate per ORN (Hz) = level, mean of 8 Poisson seeds; browser maps path distance to 0.4-1.6 Hz (adapted, log transduction)"}}};
+/*SIM-BEGIN*/
+/* ================= 시뮬레이션 핵심 (DOM 없음 · 헤드리스로 돌릴 수 있음) =================
+   커넥톰이 정하는 것: 빛 → 회전 방향·세기(같은 쪽 하강 뉴런 DNp07·DNb05·DNbe001), 냄새 → 구동 세기(직진/방향 전환),
+                       루밍 → 거대섬유(DNp01) 탈출 여부 + DNp04 좌우 차이로 점프 방향.
+   손으로 만든 것: 걷기·점프 물리, 눈별 빛 세기 공식, 냄새 확산, 도구 범위, 위험 지형. */
+const SIM = (() => {
+'use strict';
+function seg(levels, x){
+  x = Math.max(levels[0], Math.min(levels[levels.length-1], x));
+  let i = 0; while (i < levels.length-2 && levels[i+1] <= x) i++;
+  return [i, (x-levels[i])/(levels[i+1]-levels[i])];
+}
+// 반응표 양선형 보간: kind = 'light' | 'loom', l/r = 왼쪽·오른쪽 입력 (Hz)
+function brain2(kind, l, r){
+  const L = T.levels2d, [i,fi] = seg(L,l), [j,fj] = seg(L,r), tb = T[kind];
+  const a = tb[L[i]+','+L[j]], b = tb[L[i+1]+','+L[j]], c = tb[L[i]+','+L[j+1]], d = tb[L[i+1]+','+L[j+1]];
+  const o = {}; for (const k of T.readouts) o[k] = a[k]*(1-fi)*(1-fj) + b[k]*fi*(1-fj) + c[k]*(1-fi)*fj + d[k]*fi*fj;
+  return o;
+}
+let ODOR_ROWS = null;   // 냄새 표 키는 "1.0"처럼 문자열 → 수치 순서로 행을 맞춘다
+function brainOdor(x){
+  if (!ODOR_ROWS) ODOR_ROWS = Object.keys(T.odor).sort((p, q) => parseFloat(p) - parseFloat(q)).map(k => T.odor[k]);
+  const L = T.odor_levels, [i,f] = seg(L,x), a = ODOR_ROWS[i], b = ODOR_ROWS[i+1];
+  const o = {}; for (const k of T.readouts) o[k] = a[k]*(1-f) + b[k]*f; return o;
+}
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+function mulberry(seed){ let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const fwd = h => [Math.sin(h), Math.cos(h)];      // h가 커지면 왼쪽으로 돈다
+const leftv = h => [Math.cos(h), -Math.sin(h)];
+
+const K = {
+  DT: 1/30,
+  GF_TH: 45,            // 거대섬유 탈출 문턱 (Hz, 손으로 정함 — ①탈출 실험과 같음)
+  EYE: 0.9,             // 눈 방향 = 머리 방향 ± 0.9 rad
+  LAMP: 140,            // 등 밝기 (손으로 정함): 140·cos^1.5 / (1 + d²/60)
+  TURN: 0.03,           // 회전 이득: (ΣL − ΣR) × 0.03 rad/s 단위
+  WALK: 1.1,            // 기본 걸음 (칸/초)
+  BAIT_LIFE: 25, BAIT_R: 9, FEED_D: 1000,
+  PUFF_H: 6.5, PUFF_V: 11, PUFF_SIZE: 1.0, LOOM_GAIN: 60,
+  JUMP_V: 6.0, JUMP_VY: 4.4, G: 12.5,
+  SPAWN_DT: 0.5,
+  SUB: 4                // 빛 가시성 격자 해상도 (칸당)
+};
+const HAZ = {'~':'water', 'w':'web', 'o':'hole'};
+const LIGHTSUM = b => [b.DNp07_L + b.DNb05_L + b.DNbe001_L, b.DNp07_R + b.DNb05_R + b.DNbe001_R];
+let ODOR_KEYS = null;
+
+class Sim {
+  constructor(level, opts = {}){
+    this.lv = level;
+    this.brainOn = opts.brainOn !== false; this.brainEverOff = !this.brainOn;
+    this.lightOn = opts.lightOn !== false;
+    this.seed = opts.seed ?? 1;
+    this.R = mulberry(this.seed);
+    const rows = level.map; this.H = rows.length; this.W = rows[0].length;
+    this.g = rows.map(r => r.split(''));
+    this.obj = new Array(this.W*this.H).fill(null);
+    this.lamps = []; this.baits = []; this.puffs = []; this.flies = [];
+    this.t = 0; this.n = 0; this.started = false; this.over = false; this.spawned = 0;
+    this.inv = Object.assign({lamp:0, shade:0, bait:0, puff:0}, level.tools);
+    this.cur = {lamp:0, shade:0}; this.peak = {lamp:0, shade:0}; this.consumed = 0;
+    this.saved = 0; this.dead = 0; this.deaths = {water:0, web:0, hole:0, time:0};
+    this.events = []; this.log = [];
+    for (let z = 0; z < this.H; z++) for (let x = 0; x < this.W; x++){
+      const c = this.g[z][x];
+      if (c === 'S') this.spawn = {x, z};
+      if (c === 'J') this.jar = {x, z};
+      if (c === 'L') this.lamps.push({x, z, fixed:true});
+    }
+    this.total = level.flies;
+    this.lightDirty = true; this.odorDirty = true;
+    this.recalc();
+  }
+  cell(x, z){ return (x < 0 || z < 0 || x >= this.W || z >= this.H) ? '#' : this.g[z][x]; }
+  walkBlocked(x, z, air){
+    const c = this.cell(x, z);
+    if (c === '#' || c === 'L') return true;
+    if (c === '=' && !air) return true;
+    const o = this.obj[z*this.W + x];
+    return o === 'lamp' || o === 'shade';
+  }
+  lightBlocked(x, z){ const c = this.cell(x, z); return c === '#' || this.obj[z*this.W + x] === 'shade'; }
+  odorBlocked(x, z){ return this.lightBlocked(x, z); }
+
+  /* ---------- 도구 ---------- */
+  canPlace(tool, x, z){
+    if (x < 0 || z < 0 || x >= this.W || z >= this.H) return '판 밖입니다';
+    if (this.over) return '이미 끝났습니다';
+    if ((this.inv[tool] || 0) <= 0) return '남은 도구가 없습니다';
+    const c = this.cell(x, z), o = this.obj[z*this.W + x];
+    if (tool === 'puff'){
+      if (!this.started) return '겁주기는 출발한 뒤에 쓸 수 있습니다';
+      return c === '#' ? '벽 위에는 쓸 수 없습니다' : '';
+    }
+    if (tool === 'bait' && c === 'J') return '';           // 병 안에 미끼 = 초파리 덫
+    if (c !== '.') return '빈 바닥에만 놓을 수 있습니다';
+    if (o) return '이미 무언가 있습니다';
+    if (tool === 'lamp' || tool === 'shade'){
+      for (const f of this.flies) if (f.state === 'walk' && Math.floor(f.x) === x && Math.floor(f.z) === z) return '초파리가 서 있는 칸입니다';
+    }
+    return '';
+  }
+  act(a){ // {a:'place', tool, x, z} | {a:'remove', x, z}
+    let err = '';
+    if (a.a === 'place'){
+      err = this.canPlace(a.tool, a.x, a.z); if (err) return err;
+      const i = a.z*this.W + a.x;
+      this.inv[a.tool]--;
+      if (a.tool === 'lamp' || a.tool === 'shade'){
+        this.obj[i] = a.tool;
+        if (a.tool === 'lamp') this.lamps.push({x:a.x, z:a.z, fixed:false});
+        this.cur[a.tool]++; this.peak[a.tool] = Math.max(this.peak[a.tool], this.cur[a.tool]);
+        this.lightDirty = true; this.odorDirty = true;
+      } else if (a.tool === 'bait'){
+        const old = this.baits.find(b => b.x === a.x && b.z === a.z);   // 같은 칸이면 새 과일로 바꾼다
+        if (old) old.age = 0; else this.baits.push({x:a.x, z:a.z, age:0});
+        this.consumed++; this.odorDirty = true;
+      } else if (a.tool === 'puff'){
+        this.puffs.push({x:a.x+.5, z:a.z+.5, y:K.PUFF_H, th:{}}); this.consumed++;
+      }
+    } else if (a.a === 'remove'){
+      const i = a.z*this.W + a.x, o = this.obj[i];
+      if (o !== 'lamp' && o !== 'shade') return '치울 수 있는 도구가 없습니다';
+      this.obj[i] = null; this.inv[o]++; this.cur[o]--;
+      if (o === 'lamp') this.lamps = this.lamps.filter(l => l.fixed || l.x !== a.x || l.z !== a.z);
+      this.lightDirty = true; this.odorDirty = true;
+    } else if (a.a === 'brain'){
+      this.brainOn = !!a.on; this.brainEverOff = this.brainEverOff || !a.on;
+    } else return '알 수 없는 동작';
+    this.log.push(Object.assign({n:this.n, started:this.started}, a));
+    this.recalc();
+    return '';
+  }
+  get used(){ return this.peak.lamp + this.peak.shade + this.consumed; }
+  start(){ if (!this.started){ this.started = true; this.log.push({n:0, a:'start'}); } }
+
+  /* ---------- 빛: 등마다 가시성 격자 (벽·가림막이 빛을 막는다) ---------- */
+  recalc(){
+    if (this.lightDirty){
+      const S = K.SUB, W = this.W*S, H = this.H*S;
+      for (const L of this.lamps){
+        const vis = new Uint8Array(W*H), lx = L.x+.5, lz = L.z+.5;
+        for (let v = 0; v < H; v++) for (let u = 0; u < W; u++){
+          const px = (u+.5)/S, pz = (v+.5)/S;
+          vis[v*W+u] = this.los(lx, lz, px, pz, L) ? 1 : 0;
+        }
+        L.vis = vis;
+      }
+      this.lightDirty = false;
+      this.lightVersion = (this.lightVersion || 0) + 1;
+    }
+    if (this.odorDirty){
+      const W = this.W, H = this.H, D = new Float32Array(W*H).fill(Infinity);
+      for (const b of this.baits){
+        const d = new Float32Array(W*H).fill(Infinity), q = [[b.x, b.z]]; d[b.z*W+b.x] = 0;
+        for (let k = 0; k < q.length; k++){
+          const [x, z] = q[k], dd = d[z*W+x];
+          if (dd >= K.BAIT_R + 1) continue;
+          for (const [ax, az] of [[1,0],[-1,0],[0,1],[0,-1]]){
+            const u = x+ax, v = z+az;
+            if (u < 0 || v < 0 || u >= W || v >= H || this.odorBlocked(u, v)) continue;
+            if (d[v*W+u] > dd+1){ d[v*W+u] = dd+1; q.push([u, v]); }
+          }
+        }
+        for (let i = 0; i < W*H; i++) D[i] = Math.min(D[i], d[i]);
+      }
+      this.odorD = D; this.odorDirty = false;
+      this.odorVersion = (this.odorVersion || 0) + 1;
+    }
+  }
+  los(lx, lz, px, pz, L){
+    const dx = px-lx, dz = pz-lz, d = Math.hypot(dx, dz), n = Math.ceil(d/0.2);
+    for (let k = 1; k < n; k++){
+      const x = Math.floor(lx + dx*k/n), z = Math.floor(lz + dz*k/n);
+      if (x === L.x && z === L.z) continue;
+      if (this.lightBlocked(x, z)) return false;
+    }
+    return true;
+  }
+  visible(L, x, z){
+    const S = K.SUB, u = clamp(Math.floor(x*S), 0, this.W*S-1), v = clamp(Math.floor(z*S), 0, this.H*S-1);
+    return L.vis[v*this.W*S + u] === 1;
+  }
+  // 눈 하나에 들어오는 빛 (Tm3 입력 Hz로 씀). side +1 왼눈, −1 오른눈
+  eye(x, z, h, side){
+    if (!this.lightOn) return 0;
+    const eh = h + side*K.EYE, ex = Math.sin(eh), ez = Math.cos(eh);
+    let s = 0;
+    for (const L of this.lamps){
+      const dx = L.x+.5-x, dz = L.z+.5-z, d = Math.hypot(dx, dz);
+      if (!this.visible(L, x, z)) continue;
+      const cos = (dx*ex + dz*ez)/Math.max(d, 1e-3);
+      s += K.LAMP*Math.max(0, cos)**1.5/(1 + d*d/60);
+    }
+    return clamp(s, 0, 100);
+  }
+  // 바닥 밝기 (그림용, 방향 무관)
+  lux(x, z){
+    if (!this.lightOn) return 0;
+    let s = 0;
+    for (const L of this.lamps){
+      if (!this.visible(L, x, z)) continue;
+      const d = Math.hypot(L.x+.5-x, L.z+.5-z);
+      s += 100/(1 + d*d/60);
+    }
+    return clamp(s/100, 0, 1.4);
+  }
+  // 과일 냄새 → 수용 뉴런(ORN) 발화율 Hz. 길 거리 d로 감쇠 (손으로 정함)
+  odor(x, z){
+    if (!this.baits.length) return 0;
+    const W = this.W, a = Math.floor(x), b = Math.floor(z);
+    if (a < 0 || b < 0 || a >= W || b >= this.H) return 0;
+    const d = this.odorD[b*W+a]; if (!isFinite(d)) return 0;
+    const fx = x - a - .5, fz = z - b - .5;
+    let dd = d;
+    const ia = a + Math.sign(fx), ib = b + Math.sign(fz);
+    const nx = (ia >= 0 && ia < W) ? this.odorD[b*W+ia] : Infinity, nz = (ib >= 0 && ib < this.H) ? this.odorD[ib*W+a] : Infinity;
+    if (isFinite(nx)) dd += (nx-d)*Math.abs(fx); if (isFinite(nz)) dd += (nz-d)*Math.abs(fz);
+    if (dd > K.BAIT_R) return 0;
+    return 0.35 + 0.9*(1 - dd/K.BAIT_R);
+  }
+  odorDrive(b){ if (!ODOR_KEYS) ODOR_KEYS = T.readouts; let s = 0; for (const k of ODOR_KEYS) s += b[k]; return s; }
+
+  /* ---------- 한 걸음 ---------- */
+  step(){
+    if (!this.started || this.over) return;
+    const dt = K.DT, R = this.R, rnd = (a=1) => (R()*2-1)*a;
+    this.t += dt; this.n++;
+    // 생성
+    while (this.spawned < this.total && this.t >= this.spawned*K.SPAWN_DT){
+      const s = this.spawn;
+      this.flies.push({id:this.spawned, x:s.x+.5+rnd(.2), z:s.z+.5+rnd(.2), y:0, h:R()*Math.PI*2, state:'walk',
+        vx:0, vy:0, vz:0, refr:0, dPrev:null, inp:{l:0, r:0}, sum:[0,0], turn:0, odor:0, odorD:0, oState:'', loom:{l:0,r:0}, gf:0, p04:[0,0], born:this.t});
+      this.events.push({type:'spawn', id:this.spawned});
+      this.spawned++;
+    }
+    // 미끼 수명
+    if (this.baits.length){
+      for (const b of this.baits) b.age += dt;
+      const n = this.baits.length; this.baits = this.baits.filter(b => b.age < K.BAIT_LIFE);
+      if (this.baits.length !== n){ this.odorDirty = true; this.recalc(); this.events.push({type:'baitgone'}); }
+    }
+    // 겁주기: 물체가 위에서 내려온다
+    for (const p of this.puffs){ p.y -= K.PUFF_V*dt; }
+    const landed = this.puffs.filter(p => p.y <= 0.35);
+    for (const p of landed) this.events.push({type:'puffland', x:p.x, z:p.z});
+    this.puffs = this.puffs.filter(p => p.y > 0.35);
+
+    for (const f of this.flies){
+      if (f.state === 'saved' || f.state === 'dead') continue;
+      f.refr = Math.max(0, f.refr - dt);
+      if (f.state === 'air'){
+        const nx = f.x + f.vx*dt, nz = f.z + f.vz*dt;
+        if (this.walkBlocked(Math.floor(nx), Math.floor(f.z), true)) f.vx = -f.vx*.3; else f.x = nx;
+        if (this.walkBlocked(Math.floor(f.x), Math.floor(nz), true)) f.vz = -f.vz*.3; else f.z = nz;
+        f.y += f.vy*dt; f.vy -= K.G*dt;
+        if (f.y <= 0){ f.y = 0; f.state = 'walk'; f.refr = 0.8; this.events.push({type:'land', id:f.id}); this.checkCell(f); }
+        continue;
+      }
+      // ① 빛 → 커넥톰 (Tm3 좌우 입력 → 하강 뉴런 좌우)
+      const l = this.eye(f.x, f.z, f.h, 1), r = this.eye(f.x, f.z, f.h, -1);
+      const b = brain2('light', l, r), [SL, SR] = LIGHTSUM(b);
+      f.inp.l = l; f.inp.r = r; f.sum[0] = SL; f.sum[1] = SR;
+      // d/dh fwd(h) = 왼쪽 벡터 → h가 커지면 왼쪽으로 돈다. 왼쪽 발화가 크면 h를 키운다
+      const turn = this.brainOn ? clamp((SL - SR)*K.TURN, -3, 3) : 0;
+      f.turn = turn;
+      let noise = rnd(1.6), sp = K.WALK + (this.brainOn ? clamp((SL+SR)*0.0025, 0, 0.7) : 0);
+      // ② 냄새 → 커넥톰 (ORN 발화율 → 하강 뉴런 전체 구동). 세지면 직진, 약해지면 방향 전환 (규칙은 손으로)
+      const rate = this.odor(f.x, f.z) * (1 + rnd(.02));
+      f.odor = rate; f.oState = '';
+      if (rate > 0){
+        const D = this.odorDrive(brainOdor(rate)); f.odorD = D;
+        if (this.brainOn){
+          if (f.dPrev == null) f.dPrev = D;
+          const dD = (D - f.dPrev)/(f.dPrev + 5);
+          f.dPrev += (D - f.dPrev)*clamp(dt*2.5, 0, 1);
+          if (D > K.FEED_D){ noise *= 2; sp = 0.45; f.oState = 'feed'; }            // 구동이 포화 → 먹으며 머문다
+          else if (D > 1){
+            if (dD < -0.002){ noise = rnd(1)*14; sp = Math.min(sp, 0.9); f.oState = 'cast'; }
+            else if (dD > 0.001){ noise *= 0.1; sp = Math.max(sp, 2.2); f.oState = 'surge'; }
+            else { f.oState = 'search'; }
+          }
+        }
+      } else { f.dPrev = null; f.odorD = 0; }
+      f.h += (turn + noise)*dt*1.6;
+      // ③ 루밍 → 커넥톰 (LPLC2·LC4 좌우 입력 → 거대섬유 DNp01, DNp04)
+      let inL = 0, inR = 0;
+      for (const p of this.puffs){
+        const dx = p.x - f.x, dz = p.z - f.z, dy = p.y - 0.15, d = Math.hypot(dx, dy, dz);
+        const th = 2*Math.atan(K.PUFF_SIZE/Math.max(d, .05)), prev = p.th[f.id];
+        p.th[f.id] = th;
+        if (prev == null) continue;
+        const dth = (th - prev)/dt;
+        const lv = leftv(f.h), lat = (dx*lv[0] + dz*lv[1])/Math.max(Math.hypot(dx, dz), 1e-3), top = Math.abs(dy)/d;
+        const wl = clamp(.5 + lat*.8, 0, 1)*(1-top) + top, wr = clamp(.5 - lat*.8, 0, 1)*(1-top) + top;
+        const drive = clamp(dth*K.LOOM_GAIN, 0, 100);
+        inL = Math.max(inL, drive*wl); inR = Math.max(inR, drive*wr);
+      }
+      f.loom.l = inL; f.loom.r = inR;
+      if (inL > 0 || inR > 0){
+        const bl = brain2('loom', inL, inR); f.gf = (bl.DNp01_L + bl.DNp01_R)/2; f.p04 = [bl.DNp04_L, bl.DNp04_R];
+        if (this.brainOn && f.gf > K.GF_TH && f.refr <= 0){ this.jump(f, bl); continue; }
+      } else { f.gf *= 0.85; f.p04[0] *= .85; f.p04[1] *= .85; }
+      // 걷기 + 벽에서 튕김
+      const [vx, vz] = fwd(f.h), rr = 0.16;
+      let nx = f.x + vx*sp*dt, nz = f.z + vz*sp*dt, bx = false, bz = false;
+      if (this.walkBlocked(Math.floor(nx + Math.sign(vx)*rr), Math.floor(f.z), false) && !this.walkBlocked(Math.floor(f.x), Math.floor(f.z), false)){ bx = true; nx = f.x; }
+      if (this.walkBlocked(Math.floor(nx), Math.floor(nz + Math.sign(vz)*rr), false) && !this.walkBlocked(Math.floor(f.x), Math.floor(f.z), false)){ bz = true; nz = f.z; }
+      if (bx || bz){ const ux = bx ? -vx : vx, uz = bz ? -vz : vz; f.h = Math.atan2(ux, uz) + rnd(.35); }
+      f.x = nx; f.z = nz;
+      this.checkCell(f);
+    }
+    // 끝?
+    const alive = this.flies.filter(f => f.state === 'walk' || f.state === 'air').length;
+    if (this.spawned >= this.total && alive === 0) this.finish();
+    else if (this.t >= this.lv.time){
+      for (const f of this.flies) if (f.state === 'walk' || f.state === 'air'){ f.state = 'dead'; f.cause = 'time'; this.dead++; this.deaths.time++; }
+      this.dead += this.total - this.spawned; this.deaths.time += this.total - this.spawned;
+      this.finish();
+    }
+  }
+  jump(f, bl){
+    // 탈출: DNp04는 위협 쪽에서 켜진다 → 반대쪽으로. 위협에서 멀어지는 쪽이 기본
+    const side = bl.DNp04_L - bl.DNp04_R, lv = leftv(f.h);
+    let p = this.puffs[0], best = 1e9;
+    for (const q of this.puffs){ const d = Math.hypot(q.x-f.x, q.z-f.z); if (d < best){ best = d; p = q; } }
+    let ax = f.x - p.x, az = f.z - p.z; const an = Math.hypot(ax, az) || 1; ax /= an; az /= an;
+    const latDir = side > 2 ? -1 : side < -2 ? 1 : (this.R() < .5 ? -1 : 1);
+    const hx = ax*.85 + lv[0]*latDir*.45, hz = az*.85 + lv[1]*latDir*.45, n = Math.hypot(hx, hz) || 1;
+    f.vx = hx/n*K.JUMP_V; f.vz = hz/n*K.JUMP_V; f.vy = K.JUMP_VY; f.state = 'air'; f.h = Math.atan2(hx, hz);
+    this.events.push({type:'jump', id:f.id, gf:f.gf, side});
+  }
+  checkCell(f){
+    const x = Math.floor(f.x), z = Math.floor(f.z), c = this.cell(x, z);
+    if (c === 'J'){ f.state = 'saved'; this.saved++; this.events.push({type:'saved', id:f.id}); return; }
+    const hz = HAZ[c];
+    if (hz){ f.state = 'dead'; f.cause = hz; this.dead++; this.deaths[hz]++; this.events.push({type:'dead', id:f.id, cause:hz}); }
+  }
+  finish(){ if (!this.over){ this.over = true; this.events.push({type:'over'}); } }
+  get pct(){ return Math.round(this.saved/this.total*100); }
+  stars(){
+    const lv = this.lv, p = this.saved/this.total*100;
+    if (p < lv.goal) return 0;
+    if (p < lv.goal2) return 1;
+    return this.used <= lv.par ? 3 : 2;
+  }
+}
+// 기록된 동작(log)을 같은 씨앗으로 다시 돌린다 (대조 실험·테스트용)
+function replay(level, log, opts = {}){
+  const s = new Sim(level, opts);
+  const pre = log.filter(a => !a.started && a.a !== 'start'), post = log.filter(a => a.started);
+  for (const a of pre) s.act(a);
+  s.start();
+  let k = 0; const maxT = level.time + 2;
+  while (!s.over && s.t < maxT){
+    while (k < post.length && post[k].n <= s.n){ s.act(post[k]); k++; }
+    s.step();
+  }
+  s.events.length = 0;
+  return s;
+}
+return {Sim, replay, brain2, brainOdor, K, LIGHTSUM};
+})();
+/*SIM-END*/
+
+/*LEVELS-BEGIN*/
+const LEVELS = [
+{name:'첫 불빛', tip:'등을 병 바로 뒤에 놓아 보세요. 초파리는 빛 쪽으로 몸을 틉니다.', flies:12, goal:50, goal2:80, par:1, time:60, tools:{lamp:1},
+ map:[
+ '################',
+ '#~~~~~~~~~~~~~~#',
+ '#..............#',
+ '#S...........J.#',
+ '#..............#',
+ '#~~~~~~~~~~~~~~#',
+ '################']},
+{name:'모퉁이', tip:'등은 벽 너머를 비추지 못합니다. 모퉁이에 먼저 두었다가, 초파리가 모이면 등을 눌러 치우고 병 뒤로 옮기세요.', flies:14, goal:50, goal2:75, par:1, time:60, tools:{lamp:1},
+ map:[
+ '##############',
+ '#S...........#',
+ '#............#',
+ '#............#',
+ '######~~~#...#',
+ '##########...#',
+ '##########...#',
+ '##########.J.#',
+ '##########...#',
+ '##############']},
+{name:'고장 난 가로등', tip:'복도 끝 가로등이 초파리를 물로 꾀어냅니다. 가림막으로 빛을 막으세요.', flies:14, goal:50, goal2:75, par:2, time:75, tools:{lamp:1, shade:1},
+ map:[
+ '#################',
+ '#.....###########',
+ '#S.........~~~~L#',
+ '#.....###########',
+ '#.....#.........#',
+ '#.........J.....#',
+ '#~~~~~#~~~~~~~~~#',
+ '#################']},
+{name:'거미줄 지름길', tip:'병 뒤에 바로 등을 두면 대각선으로 거미줄을 지나갑니다. 오른쪽 위로 먼저 부르세요.', flies:16, goal:50, goal2:75, par:1, time:80, tools:{lamp:2},
+ map:[
+ '#################',
+ '#S..............#',
+ '#...............#',
+ '#.....ww........#',
+ '#......ww.......#',
+ '#.......ww......#',
+ '#~~~~~~~~ww...J.#',
+ '#~~~~~~~~~ww....#',
+ '#################']},
+{name:'과일 냄새', tip:'이 창고에는 등이 없습니다. 과일 냄새는 벽을 돌아 퍼집니다. 병 옆에 미끼를 두세요.', flies:14, goal:40, goal2:65, par:2, time:60, tools:{bait:2},
+ map:[
+ '##############',
+ '#S.....#.....#',
+ '#......#.###.#',
+ '#......#.#J..#',
+ '#..........#~#',
+ '#......#.....#',
+ '##############']},
+{name:'깜짝!', tip:'울타리 앞에 모인 초파리 뒤쪽을 겁주면, 거대섬유가 발화한 초파리만 울타리를 뛰어넘습니다.', flies:14, goal:50, goal2:75, par:3, time:80, tools:{lamp:1, puff:4},
+ map:[
+ '################',
+ '#......=.......#',
+ '#......=.......#',
+ '#S.....=.....J.#',
+ '#......=.......#',
+ '#......=.......#',
+ '################']},
+{name:'개울 건너기', tip:'난간 너머 개울은 걸어서 못 건넙니다. 놀란 초파리는 멀리 뜁니다.', flies:16, goal:50, goal2:75, par:5, time:90, tools:{lamp:1, puff:7},
+ map:[
+ '################',
+ '#S........=~...#',
+ '#.........=~..##',
+ '#.........=~.J.#',
+ '#.........=~..##',
+ '#.........=~...#',
+ '################']},
+{name:'두 개의 가로등', tip:'벽 틈 가로등 둘이 물과 거미줄로 꾀어냅니다. 틈 앞을 가려 빛을 막으세요.', flies:16, goal:50, goal2:75, par:3, time:80, tools:{lamp:1, shade:2},
+ map:[
+ '##################',
+ '####L#######L#####',
+ '####~#######w#####',
+ '#S...............#',
+ '#..............J.#',
+ '#................#',
+ '#~~~~~~~~~~~~~~~~#',
+ '##################']},
+{name:'빛이 안 드는 상자', tip:'병은 상자 안쪽 구석에 있어 빛이 닿지 않습니다. 등으로 상자 앞까지 부르고, 병 안에 미끼를 넣으세요.', flies:16, goal:50, goal2:75, par:3, time:90, tools:{lamp:1, bait:2},
+ map:[
+ '#################',
+ '#S..............#',
+ '#...............#',
+ '#....w..........#',
+ '#.......####....#',
+ '#.......#J.#....#',
+ '#.......#..#....#',
+ '#.......#..#....#',
+ '#...............#',
+ '#ww...........ww#',
+ '#################']},
+{name:'구멍 숭숭', tip:'구멍 위로도 빛은 건너갑니다. 등을 오른쪽 위 → 오른쪽 아래 → 병 뒤로 차례로 옮기세요.', flies:16, goal:40, goal2:65, par:1, time:90, tools:{lamp:2},
+ map:[
+ '#################',
+ '#S..............#',
+ '#...............#',
+ '#...............#',
+ '#oooooooooo.....#',
+ '#oooooooooo.....#',
+ '#...............#',
+ '#.J.............#',
+ '#...............#',
+ '#################']},
+{name:'거미 소굴', tip:'울타리 너머로 뛰게 한 다음, 벽 틈 가로등을 가려야 거미줄로 안 갑니다.', flies:18, goal:50, goal2:75, par:6, time:100, tools:{lamp:1, shade:1, puff:7},
+ map:[
+ '##################',
+ '#S.......##L######',
+ '#........##w######',
+ '#........=.......#',
+ '#........=.......#',
+ '#........=.....J.#',
+ '#........#.......#',
+ '##################']},
+{name:'마지막 여정', tip:'울타리 넘기기 → 가로등 가리기 → 빛이 안 드는 병에 미끼. 배운 것을 모두 씁니다.', flies:20, goal:50, goal2:75, par:8, time:120, tools:{lamp:1, shade:1, bait:2, puff:8},
+ map:[
+ '####################',
+ '#S......=....##L####',
+ '#.......=....##w####',
+ '#.......=..........#',
+ '#.......=.....####.#',
+ '#.......=.......J#.#',
+ '#.......=.....####.#',
+ '#.......=..........#',
+ '####################']},
+];
+/*LEVELS-END*/
+
+/* ================= 게임 (그림·입력·화면) ================= */
+const {Sim, replay, K} = SIM;
+const $ = id => document.getElementById(id);
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+const TOOLS = {
+  look:  {ic:'👆', lb:'관찰',   name:'관찰'},
+  lamp:  {ic:'💡', lb:'등불',   name:'등불'},
+  shade: {ic:'⬛', lb:'가림막', name:'가림막'},
+  bait:  {ic:'🍑', lb:'미끼',   name:'과일 미끼'},
+  puff:  {ic:'✋', lb:'깜짝 손', name:'깜짝 손'}
+};
+const TOOL_HELP = {
+  lamp:'빈 바닥에 놓습니다. 다시 누르면 치우고, 끌어서 옮길 수 있습니다.',
+  shade:'빛과 길을 막는 가림막. 다시 누르면 치웁니다.',
+  bait:'냄새가 길을 따라 9칸 퍼지고 25초 갑니다. 병 안에도 넣을 수 있어요.',
+  puff:'손이 내려옵니다. 거대섬유가 발화한 초파리만 반대쪽으로 뜁니다.',
+  look:'초파리를 눌러 뇌를 봅니다.'
+};
+
+/* ---------- 저장 ---------- */
+const SAVE_KEY = 'fruitfly-herd-v1';
+let save = {best:{}, unlocked:1, mute:false};
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(save, s); } catch(e){}
+function writeSave(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} }
+
+/* ---------- 소리 (아주 짧은 효과음) ---------- */
+let AC = null;
+function beep(f, d=0.08, type='sine', vol=0.05, slide=0){
+  if (save.mute) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, f+slide), t+d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t+d);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t+d+0.02);
+  } catch(e){}
+}
+
+/* ---------- three.js 기본 ---------- */
+const view = $('view');
+const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+view.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1020);
+const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.1, 200);
+scene.add(new THREE.HemisphereLight(0x8fa0ff, 0x1a1420, 0.75));
+const moon = new THREE.DirectionalLight(0xc8d2ff, 0.55); moon.position.set(-6, 14, 8); scene.add(moon);
+let world = new THREE.Group(); scene.add(world);
+
+function canvasTex(w, h, draw){
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); draw(g, w, h);
+  const t = new THREE.CanvasTexture(c); return t;
+}
+const HALO = canvasTex(64, 64, (g, w) => {
+  const gr = g.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,'rgba(255,230,150,.95)'); gr.addColorStop(.35,'rgba(255,200,90,.35)'); gr.addColorStop(1,'rgba(255,180,60,0)');
+  g.fillStyle = gr; g.fillRect(0,0,w,w);
+});
+const SHADOW = canvasTex(64, 64, (g, w) => {
+  const gr = g.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,'rgba(0,0,0,.75)'); gr.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0,0,w,w);
+});
+
+/* ---------- 상태 ---------- */
+let LV = 0, sim = null, tool = 'look', speed = 1, paused = false, phase = 'menu';   // menu | intro | prep | run | result
+let sel = null, auto = true, lastFrame = performance.now(), acc = 0, resultTimer = 0;
+let floorTex = null, floorCanvas = null, floorKey = '', lampObjs = new Map(), shadeObjs = new Map(), baitObjs = [], puffObjs = [];
+let flyMesh = null, eyeMesh = null, wingMesh = null, ringMesh = null, jarLabels = [], effects = [], webCells = [];
+const PX = 24;  // 바닥 그림 해상도 (칸당 픽셀)
+
+/* ---------- 판 만들기 ---------- */
+function clearWorld(){
+  scene.remove(world);
+  world.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && o.material.map !== HALO && o.material.map !== SHADOW) o.material.map.dispose(); });
+  world = new THREE.Group(); scene.add(world);
+  lampObjs.clear(); shadeObjs.clear(); baitObjs = []; puffObjs = []; effects = []; jarLabels = [];
+}
+function boxGeo(w, h, d, top, side){
+  const g = new THREE.BoxGeometry(w, h, d), n = g.attributes.position.count, col = new Float32Array(n*3);
+  const ct = new THREE.Color(top), cs = new THREE.Color(side);
+  for (let i = 0; i < n; i++){ const c = g.attributes.normal.getY(i) > 0.5 ? ct : cs; col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3)); return g;
+}
+function buildLevel(){
+  clearWorld();
+  const W = sim.W, H = sim.H;
+  // 바닥 (캔버스에 타일·빛·냄새·위험 지형을 함께 그림)
+  floorCanvas = document.createElement('canvas'); floorCanvas.width = W*PX; floorCanvas.height = H*PX;
+  floorTex = new THREE.CanvasTexture(floorCanvas); floorTex.magFilter = THREE.LinearFilter;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({map:floorTex}));
+  floor.rotation.x = -Math.PI/2; floor.position.set(W/2, 0, H/2); world.add(floor);
+  floorKey = '';
+  // 바닥 아래 판 테두리
+  const base = new THREE.Mesh(boxGeo(W+0.3, 0.6, H+0.3, 0x2a2440, 0x1a1628), new THREE.MeshLambertMaterial({vertexColors:true}));
+  base.position.set(W/2, -0.31, H/2); world.add(base);
+  // 벽
+  const walls = [];
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (sim.g[z][x] === '#') walls.push([x, z]);
+  const wm = new THREE.InstancedMesh(boxGeo(1, 1, 1, 0x4b4560, 0x2c2840), new THREE.MeshLambertMaterial({vertexColors:true}), walls.length);
+  const m = new THREE.Matrix4(), col = new THREE.Color();
+  walls.forEach(([x, z], i) => {
+    m.makeTranslation(x+.5, .5, z+.5); wm.setMatrixAt(i, m);
+    const k = 0.86 + 0.14*(((x*7 + z*13) % 5)/4); col.setRGB(k, k, k); wm.setColorAt(i, col);
+  });
+  world.add(wm);
+  // 물 (반짝이는 판)
+  const waters = [];
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (sim.g[z][x] === '~') waters.push([x, z]);
+  if (waters.length){
+    const wg = new THREE.PlaneGeometry(1, 1); wg.rotateX(-Math.PI/2);
+    const wmesh = new THREE.InstancedMesh(wg, new THREE.MeshLambertMaterial({color:0x58a8ff, transparent:true, opacity:.38, emissive:0x0a2a60}), waters.length);
+    waters.forEach(([x, z], i) => { m.makeTranslation(x+.5, -0.06, z+.5); wmesh.setMatrixAt(i, m); });
+    wmesh.userData.water = true; world.add(wmesh);
+  }
+  // 울타리
+  const fences = [];
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (sim.g[z][x] === '=') fences.push([x, z]);
+  if (fences.length){
+    const vertical = fences.length > 1 && fences[0][0] === fences[1][0];
+    const post = new THREE.InstancedMesh(boxGeo(.14, .5, .14, 0xd9a86a, 0x9b6a3a), new THREE.MeshLambertMaterial({vertexColors:true}), fences.length);
+    const rail = new THREE.InstancedMesh(boxGeo(vertical ? .08 : 1, .08, vertical ? 1 : .08, 0xe8bd80, 0xa77a48), new THREE.MeshLambertMaterial({vertexColors:true}), fences.length*2);
+    fences.forEach(([x, z], i) => {
+      m.makeTranslation(x+.5, .25, z+.5); post.setMatrixAt(i, m);
+      m.makeTranslation(x+.5, .2, z+.5); rail.setMatrixAt(i*2, m);
+      m.makeTranslation(x+.5, .42, z+.5); rail.setMatrixAt(i*2+1, m);
+    });
+    world.add(post); world.add(rail);
+  }
+  // 상자 (출발점)
+  const s = sim.spawn;
+  const crate = new THREE.Mesh(boxGeo(.8, .34, .8, 0xc08a52, 0x7a5330), new THREE.MeshLambertMaterial({vertexColors:true}));
+  crate.position.set(s.x+.5, .17, s.z+.5); world.add(crate);
+  const ban = new THREE.Mesh(boxGeo(.42, .12, .14, 0xffd84a, 0xd9a92a), new THREE.MeshLambertMaterial({vertexColors:true}));
+  ban.position.set(s.x+.5, .4, s.z+.5); ban.rotation.y = .5; world.add(ban);
+  // 병
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (sim.g[z][x] === 'J') addJar(x, z);
+  // 고정 가로등
+  for (const L of sim.lamps) if (L.fixed) addLampObj(L.x, L.z, true);
+  // 거미줄 위 거미
+  webCells = [];
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (sim.g[z][x] === 'w') webCells.push([x, z]);
+  const sp = webCells.filter((_, i) => i % 3 === 0);
+  if (sp.length){
+    const spider = new THREE.InstancedMesh(boxGeo(.2, .12, .2, 0x2b2230, 0x16111a), new THREE.MeshLambertMaterial({vertexColors:true}), sp.length);
+    sp.forEach(([x, z], i) => { m.makeTranslation(x+.62, .07, z+.38); spider.setMatrixAt(i, m); });
+    world.add(spider);
+  }
+  // 초파리 (인스턴스)
+  const N = sim.total;
+  flyMesh = new THREE.InstancedMesh(boxGeo(.22, .15, .44, 0x9a7448, 0x4e3620), new THREE.MeshLambertMaterial({vertexColors:true}), N);
+  eyeMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(.11, .11, .11), new THREE.MeshBasicMaterial({color:0xff3a22}), N*2);
+  const wgeo = new THREE.PlaneGeometry(.16, .3); wgeo.rotateX(-Math.PI/2); wgeo.translate(0, 0, -.15);
+  wingMesh = new THREE.InstancedMesh(wgeo, new THREE.MeshBasicMaterial({color:0xcfe0ff, transparent:true, opacity:.32, side:THREE.DoubleSide, depthWrite:false}), N*2);
+  for (const im of [flyMesh, eyeMesh, wingMesh]){ im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.count = im === flyMesh ? N : N*2; world.add(im); }
+  for (let i = 0; i < N; i++) flyMesh.setColorAt(i, new THREE.Color(1,1,1));
+  hideAllFlies();
+  ringMesh = new THREE.Mesh(new THREE.RingGeometry(.3, .38, 28), new THREE.MeshBasicMaterial({color:0xffc94a, transparent:true, opacity:.95, depthWrite:false}));
+  ringMesh.rotation.x = -Math.PI/2; ringMesh.visible = false; world.add(ringMesh);
+  // 놓기 미리보기
+  ghost = new THREE.Mesh(new THREE.PlaneGeometry(.96, .96), new THREE.MeshBasicMaterial({color:0x7bd88f, transparent:true, opacity:.35, depthWrite:false}));
+  ghost.rotation.x = -Math.PI/2; ghost.visible = false; world.add(ghost);
+  fitCamera();
+}
+let ghost = null;
+function hideAllFlies(){
+  const z = new THREE.Matrix4().makeScale(0, 0, 0);
+  for (let i = 0; i < flyMesh.count; i++) flyMesh.setMatrixAt(i, z);
+  for (let i = 0; i < eyeMesh.count; i++){ eyeMesh.setMatrixAt(i, z); wingMesh.setMatrixAt(i, z); }
+}
+function addJar(x, z){
+  const g = new THREE.Group();
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, .78, 18, 1, true), new THREE.MeshPhongMaterial({color:0xbfe8ff, transparent:true, opacity:.32, shininess:90, side:THREE.DoubleSide, depthWrite:false}));
+  glass.position.y = .39; g.add(glass);
+  const bottom = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, .04, 18), new THREE.MeshLambertMaterial({color:0x8fc9e8, transparent:true, opacity:.5}));
+  bottom.position.y = .02; g.add(bottom);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(.4, .05, 6, 18), new THREE.MeshLambertMaterial({color:0xe0f4ff}));
+  rim.rotation.x = Math.PI/2; rim.position.y = .78; g.add(rim);
+  // 깔때기 입구 표시
+  const funnel = new THREE.Mesh(new THREE.ConeGeometry(.3, .25, 14, 1, true), new THREE.MeshLambertMaterial({color:0xfff2b0, transparent:true, opacity:.6, side:THREE.DoubleSide}));
+  funnel.rotation.x = Math.PI; funnel.position.y = .72; g.add(funnel);
+  g.position.set(x+.5, 0, z+.5); world.add(g);
+  // 병 속 초파리 (구출되면 보임)
+  const inside = new THREE.InstancedMesh(new THREE.BoxGeometry(.1, .07, .16), new THREE.MeshLambertMaterial({color:0x6b4a2a}), 40);
+  inside.count = 0; g.add(inside);
+  jarLabels.push({g, inside, x, z, n:0});
+}
+function addLampObj(x, z, fixed){
+  const g = new THREE.Group();
+  const baseCol = fixed ? 0x8a4a4a : 0x3a6fb0;
+  const base = new THREE.Mesh(boxGeo(.5, .1, .5, fixed ? 0xb06060 : 0x5a9ae0, baseCol), new THREE.MeshLambertMaterial({vertexColors:true}));
+  base.position.y = .05; g.add(base);
+  const post = new THREE.Mesh(boxGeo(.1, .7, .1, 0x555066, 0x3a3548), new THREE.MeshLambertMaterial({vertexColors:true}));
+  post.position.y = .45; g.add(post);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(.34, .34, .34), new THREE.MeshBasicMaterial({color:0xffe9a0}));
+  head.position.y = .92; g.add(head);
+  const cap = new THREE.Mesh(boxGeo(.44, .08, .44, 0x6a6380, 0x4a4560), new THREE.MeshLambertMaterial({vertexColors:true}));
+  cap.position.y = 1.12; g.add(cap);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:HALO, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true}));
+  halo.scale.set(2.6, 2.6, 1); halo.position.y = .92; g.add(halo);
+  g.position.set(x+.5, 0, z+.5); g.userData = {head, halo, fixed, t:Math.random()*10};
+  world.add(g); lampObjs.set(x+','+z, g);
+  return g;
+}
+function addShadeObj(x, z){
+  const g = new THREE.Mesh(boxGeo(.92, 1.15, .92, 0x4a3a6a, 0x2a2140), new THREE.MeshLambertMaterial({vertexColors:true}));
+  g.position.set(x+.5, .575, z+.5); world.add(g); shadeObjs.set(x+','+z, g);
+}
+function addBaitObj(b){
+  const g = new THREE.Group();
+  const fruit = new THREE.Mesh(boxGeo(.34, .3, .34, 0xffa25a, 0xe0603a), new THREE.MeshLambertMaterial({vertexColors:true, emissive:0x301008}));
+  fruit.position.y = .17; g.add(fruit);
+  const leaf = new THREE.Mesh(boxGeo(.16, .04, .08, 0x6ad06a, 0x3a9a3a), new THREE.MeshLambertMaterial({vertexColors:true}));
+  leaf.position.set(.06, .35, 0); g.add(leaf);
+  g.position.set(b.x+.5, sim.cell(b.x, b.z) === 'J' ? .06 : 0, b.z+.5); world.add(g);
+  baitObjs.push({b, g});
+}
+
+/* ---------- 바닥 그림: 타일 + 빛(그림자 포함) + 냄새 + 위험 지형 ---------- */
+function hash(x, z){ let h = x*374761393 + z*668265263; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function drawFloor(force){
+  const key = sim.lightVersion + '|' + sim.odorVersion + '|' + sim.baits.map(b => Math.floor(b.age*2)).join(',') + '|' + sim.lightOn;
+  if (!force && key === floorKey) return;
+  floorKey = key;
+  const g = floorCanvas.getContext('2d'), W = sim.W, H = sim.H, S = 4, q = PX/S;
+  g.fillStyle = '#100e1c'; g.fillRect(0, 0, W*PX, H*PX);
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++){
+    const c = sim.g[z][x];
+    if (c === '#' || c === 'o') continue;
+    const h = hash(x, z), checker = (x + z) % 2;
+    let base = c === '~' ? [40, 90, 170] : [112 + checker*10 + h*14, 92 + checker*8 + h*10, 70 + checker*6 + h*8];
+    for (let v = 0; v < S; v++) for (let u = 0; u < S; u++){
+      const px = x + (u+.5)/S, pz = z + (v+.5)/S;
+      const lx = sim.lux(px, pz), od = sim.odor(px, pz);
+      const amb = 0.38, li = amb + lx*0.95;
+      let r = base[0]*li + 70*lx, gg = base[1]*li + 52*lx, b = base[2]*li + 12*lx;
+      if (od > 0.4){ const k = clamp((od-0.4)/0.85, 0, 1)*0.55; r = r*(1-k) + 255*k; gg = gg*(1-k) + 90*k; b = b*(1-k) + 170*k; }
+      g.fillStyle = `rgb(${clamp(r,0,255)|0},${clamp(gg,0,255)|0},${clamp(b,0,255)|0})`;
+      g.fillRect(x*PX + u*q, z*PX + v*q, q+.5, q+.5);
+    }
+    // 타일 이음새
+    g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 1; g.strokeRect(x*PX+.5, z*PX+.5, PX-1, PX-1);
+    if (c === 'w'){   // 거미줄
+      const cx = x*PX + PX/2, cy = z*PX + PX/2, R = PX*0.56;
+      g.strokeStyle = 'rgba(235,240,255,.85)'; g.lineWidth = 1.1;
+      for (let k = 0; k < 8; k++){ const a = k*Math.PI/4 + h; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(a)*R, cy + Math.sin(a)*R); g.stroke(); }
+      for (let rr = 3; rr < R; rr += 3.2){ g.beginPath(); for (let k = 0; k <= 8; k++){ const a = k*Math.PI/4 + h; const X = cx + Math.cos(a)*rr, Y = cy + Math.sin(a)*rr; k ? g.lineTo(X, Y) : g.moveTo(X, Y); } g.stroke(); }
+    }
+    if (c === '~'){ g.fillStyle = 'rgba(160,210,255,.25)'; g.fillRect(x*PX + 4 + h*8, z*PX + 6, 8, 2); g.fillRect(x*PX + 12 - h*6, z*PX + 15, 7, 2); }
+    if (c === 'J'){ g.fillStyle = 'rgba(255,240,170,.35)'; g.beginPath(); g.arc(x*PX + PX/2, z*PX + PX/2, PX*0.48, 0, 7); g.fill(); }
+  }
+  // 구멍: 가장자리 그림자
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (sim.g[z][x] === 'o'){
+    const gr = g.createLinearGradient(0, z*PX, 0, z*PX + PX);
+    gr.addColorStop(0, '#000'); gr.addColorStop(1, '#0a0812');
+    g.fillStyle = gr; g.fillRect(x*PX, z*PX, PX, PX);
+    g.strokeStyle = 'rgba(255,255,255,.08)'; g.strokeRect(x*PX+1.5, z*PX+1.5, PX-3, PX-3);
+  }
+  floorTex.needsUpdate = true;
+}
+
+/* ---------- 카메라: 판이 화면의 빈 곳에 꽉 차게 ---------- */
+let portrait = false;
+function fitCamera(){
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h, false);
+  if (!sim) return;
+  const W = sim.W, H = sim.H, cx = W/2, cz = H/2;
+  portrait = w < h*0.9 && W > H;
+  const el = 1.05, D = 60;   // 내려다보는 각 (rad)
+  const dir = portrait ? new THREE.Vector3(-Math.cos(el), Math.sin(el), 0) : new THREE.Vector3(0, Math.sin(el), Math.cos(el));
+  camera.position.set(cx, 0, cz).addScaledVector(dir, D);
+  camera.up.set(0, 1, 0); camera.lookAt(cx, 0, cz); camera.updateMatrixWorld();
+  // 판 모서리를 카메라 공간으로
+  const inv = camera.matrixWorldInverse, p = new THREE.Vector3();
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (const X of [0, W]) for (const Z of [0, H]) for (const Y of [-0.3, 1.2]){
+    p.set(X, Y, Z).applyMatrix4(inv); x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+  }
+  // 화면에서 비어 있는 영역 (위 바·아래 도구·패널 빼고)
+  const narrow = w <= 640;
+  const topPad = 58 + (narrow && !$('tipBar').hidden ? $('tipBar').offsetHeight + 6 : 0);
+  let botPad = 76 + (narrow ? ($('brain').offsetHeight + 8) : 0);
+  let rightPad = narrow ? 8 : 306, leftPad = 8;
+  const aw = Math.max(80, w - leftPad - rightPad), ah = Math.max(80, h - topPad - botPad);
+  const s = Math.min(aw/(x1-x0), ah/(y1-y0));
+  const rcx = leftPad + aw/2, rcy = topPad + ah/2, bcx = (x0+x1)/2, bcy = (y0+y1)/2;
+  camera.left = bcx - rcx/s; camera.right = bcx + (w - rcx)/s;
+  camera.top = bcy + rcy/s; camera.bottom = bcy - (h - rcy)/s;
+  camera.updateProjectionMatrix();
+  pxPerCell = s;
+}
+let pxPerCell = 30;
+window.addEventListener('resize', () => fitCamera());
+
+/* ---------- 초파리 그리기 ---------- */
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler(), _o = new THREE.Matrix4();
+const flyVis = [];   // 표시용 추가 상태 (떨어짐 등)
+function drawFlies(dtReal, tNow){
+  const zero = _o.makeScale(0, 0, 0);
+  for (let i = 0; i < sim.total; i++){
+    const f = sim.flies[i];
+    let show = !!f, y = 0, scale = 1, tint = null;
+    if (f){
+      const v = flyVis[i] || (flyVis[i] = {fall:0});
+      if (f.state === 'saved') show = false;
+      else if (f.state === 'dead'){
+        if (f.cause === 'water' || f.cause === 'time') show = false;
+        else if (f.cause === 'hole'){ v.fall += dtReal; y = -v.fall*v.fall*6; if (v.fall > 0.7) show = false; scale = Math.max(0.2, 1 - v.fall); }
+        else if (f.cause === 'web'){ tint = 0x8a8a9a; }
+      } else if (f.state === 'air') y = f.y;
+    }
+    if (!show){ flyMesh.setMatrixAt(i, zero); eyeMesh.setMatrixAt(i*2, zero); eyeMesh.setMatrixAt(i*2+1, zero); wingMesh.setMatrixAt(i*2, zero); wingMesh.setMatrixAt(i*2+1, zero); continue; }
+    _e.set(0, f.h, 0); _q.setFromEuler(_e); _p.set(f.x, 0.1 + y, f.z); _s.set(scale, scale, scale);
+    _m.compose(_p, _q, _s); flyMesh.setMatrixAt(i, _m);
+    if (tint !== null) flyMesh.setColorAt(i, new THREE.Color(tint));
+    for (const side of [-1, 1]){
+      _o.makeTranslation(side*.09, .04, .2); eyeMesh.setMatrixAt(i*2 + (side > 0 ? 1 : 0), _o.premultiply(_m));
+      const flap = f.state === 'air' ? Math.sin(tNow*60 + i)*0.9 : f.state === 'walk' ? Math.sin(tNow*8 + i)*0.08 : 0;
+      _e.set(0, side*(0.35 + (f.state === 'air' ? 0.5 : 0)), side*(0.25 + flap)); _q.setFromEuler(_e);
+      _o.compose(new THREE.Vector3(side*.05, .07, .02), _q, new THREE.Vector3(1,1,1)); wingMesh.setMatrixAt(i*2 + (side > 0 ? 1 : 0), _o.premultiply(_m));
+    }
+  }
+  flyMesh.instanceMatrix.needsUpdate = true; eyeMesh.instanceMatrix.needsUpdate = true; wingMesh.instanceMatrix.needsUpdate = true;
+  if (flyMesh.instanceColor) flyMesh.instanceColor.needsUpdate = true;
+  // 고른 초파리 고리
+  if (sel && (sel.state === 'walk' || sel.state === 'air')){ ringMesh.visible = true; ringMesh.position.set(sel.x, 0.03, sel.z); ringMesh.scale.setScalar(1 + 0.08*Math.sin(tNow*6)); }
+  else ringMesh.visible = false;
+}
+
+/* ---------- 효과 ---------- */
+function screenPos(x, y, z){
+  const v = new THREE.Vector3(x, y, z).project(camera), r = renderer.domElement.getBoundingClientRect();
+  return [(v.x+1)/2*r.width, (1-v.y)/2*r.height];
+}
+function pop(x, z, text, cls){
+  const [sx, sy] = screenPos(x, 0.6, z), d = document.createElement('div');
+  d.className = 'pop ' + (cls || ''); d.textContent = text; d.style.left = sx + 'px'; d.style.top = sy + 'px';
+  $('fx').appendChild(d); setTimeout(() => d.remove(), 1150);
+}
+function ring(x, z, color, life=0.6, size=1.4){
+  const m = new THREE.Mesh(new THREE.RingGeometry(.2, .28, 24), new THREE.MeshBasicMaterial({color, transparent:true, opacity:.9, depthWrite:false, side:THREE.DoubleSide}));
+  m.rotation.x = -Math.PI/2; m.position.set(x, 0.05, z); world.add(m);
+  effects.push({m, t:0, life, size});
+}
+function tickEffects(dt){
+  for (const e of effects){ e.t += dt; const k = e.t/e.life; e.m.scale.setScalar(1 + k*e.size*3); e.m.material.opacity = 0.9*(1-k); }
+  effects = effects.filter(e => { if (e.t >= e.life){ world.remove(e.m); e.m.geometry.dispose(); e.m.material.dispose(); return false; } return true; });
+}
+let toastT = 0;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1900); }
+
+/* ---------- 시뮬레이션 사건 처리 ---------- */
+function handleEvents(){
+  const jumps = [];
+  for (const e of sim.events){
+    const f = e.id != null ? sim.flies[e.id] : null;
+    if (e.type === 'saved'){
+      const j = jarLabels.find(j => j.x === Math.floor(f.x) && j.z === Math.floor(f.z)) || jarLabels[0];
+      if (j){ j.n++; const k = j.n - 1; _o.makeTranslation(Math.cos(k*2.4)*.22*Math.sqrt(k%5/5+.2), .06 + Math.floor(k/6)*.07, Math.sin(k*2.4)*.22*Math.sqrt(k%5/5+.2)); j.inside.setMatrixAt(Math.min(k, 39), _o); j.inside.count = Math.min(40, j.n); j.inside.instanceMatrix.needsUpdate = true; }
+      pop(f.x, f.z, '+1 구출!', 'good'); beep(880, .09, 'triangle', .05, 300); ring(f.x, f.z, 0x7bd88f, .5, .6);
+    } else if (e.type === 'dead'){
+      const msg = {water:'풍덩!', web:'거미줄에 걸림', hole:'구멍에 빠짐'}[e.cause] || '';
+      if (msg) pop(f.x, f.z, msg, 'bad');
+      if (e.cause === 'water') ring(f.x, f.z, 0x9fd0ff, .7, .8);
+      beep(e.cause === 'water' ? 220 : 160, .14, 'sine', .05, -80);
+    } else if (e.type === 'jump'){
+      jumps.push(f);
+    } else if (e.type === 'puffland'){
+      ring(e.x, e.z, 0xffffff, .5, 1.2);
+    } else if (e.type === 'baitgone'){
+      syncObjects();
+    }
+  }
+  sim.events.length = 0;
+  if (jumps.length){   // 한 번 겁줄 때 뛴 초파리를 한 줄로
+    const x = jumps.reduce((a, f) => a + f.x, 0)/jumps.length, z = jumps.reduce((a, f) => a + f.z, 0)/jumps.length;
+    const gf = Math.max(...jumps.map(f => f.gf));
+    pop(x, z, jumps.length > 1 ? `${jumps.length}마리 점프! 거대섬유 최대 ${Math.round(gf)}Hz` : `점프! 거대섬유 ${Math.round(gf)}Hz`, 'jump');
+    beep(520, .12, 'sawtooth', .025, 500);
+  }
+}
+
+/* ---------- 도구 오브젝트를 시뮬레이션에 맞춤 ---------- */
+function syncObjects(){
+  // 등·가림막
+  const want = new Set();
+  for (const L of sim.lamps) if (!L.fixed){ const k = L.x+','+L.z; want.add(k); if (!lampObjs.has(k)) addLampObj(L.x, L.z, false); }
+  for (const [k, g] of lampObjs) if (!g.userData.fixed && !want.has(k)){ world.remove(g); lampObjs.delete(k); }
+  const ws = new Set();
+  for (let i = 0; i < sim.obj.length; i++) if (sim.obj[i] === 'shade'){ const k = (i % sim.W)+','+Math.floor(i/sim.W); ws.add(k); if (!shadeObjs.has(k)) addShadeObj(i % sim.W, Math.floor(i/sim.W)); }
+  for (const [k, g] of shadeObjs) if (!ws.has(k)){ world.remove(g); shadeObjs.delete(k); }
+  // 미끼
+  for (const o of baitObjs) if (!sim.baits.includes(o.b)) world.remove(o.g);
+  baitObjs = baitObjs.filter(o => sim.baits.includes(o.b));
+  for (const b of sim.baits) if (!baitObjs.some(o => o.b === b)) addBaitObj(b);
+}
+function tickObjects(dt, tNow){
+  for (const [, g] of lampObjs){
+    const u = g.userData; u.t += dt;
+    const on = sim.lightOn, flick = u.fixed ? (0.85 + 0.15*Math.sin(u.t*23)*Math.sin(u.t*7)) : 1;
+    u.halo.visible = on; u.head.material.color.setHex(on ? 0xffe9a0 : 0x555060);
+    u.halo.material.opacity = on ? flick : 0;
+  }
+  for (const o of baitObjs){ const left = 1 - o.b.age/K.BAIT_LIFE; o.g.scale.setScalar(0.55 + 0.45*left); o.g.rotation.y += dt*0.6; }
+  // 깜짝 손
+  for (const o of puffObjs) if (!sim.puffs.includes(o.p)){ world.remove(o.g); world.remove(o.sh); }
+  puffObjs = puffObjs.filter(o => sim.puffs.includes(o.p));
+  for (const p of sim.puffs) if (!puffObjs.some(o => o.p === p)){
+    const g = new THREE.Group();
+    const palm = new THREE.Mesh(boxGeo(1.3, .22, 1.1, 0xf0c49a, 0xc89470), new THREE.MeshLambertMaterial({vertexColors:true}));
+    g.add(palm);
+    for (let k = 0; k < 4; k++){ const fg = new THREE.Mesh(boxGeo(.22, .2, .6, 0xf0c49a, 0xc89470), new THREE.MeshLambertMaterial({vertexColors:true})); fg.position.set(-.45 + k*.3, 0, -.8); g.add(fg); }
+    const th = new THREE.Mesh(boxGeo(.24, .2, .5, 0xf0c49a, 0xc89470), new THREE.MeshLambertMaterial({vertexColors:true})); th.position.set(.75, 0, -.1); th.rotation.y = -.6; g.add(th);
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({map:SHADOW, transparent:true, depthWrite:false}));
+    sh.rotation.x = -Math.PI/2; world.add(g); world.add(sh);
+    puffObjs.push({p, g, sh});
+  }
+  for (const o of puffObjs){
+    o.g.position.set(o.p.x, o.p.y, o.p.z);
+    o.sh.position.set(o.p.x, 0.04, o.p.z); const k = clamp(1 - o.p.y/K.PUFF_H, 0, 1); o.sh.scale.setScalar(0.8 + 2.2*k); o.sh.material.opacity = 0.3 + 0.6*k;
+  }
+  // 물 출렁
+  world.children.forEach(c => { if (c.userData && c.userData.water) c.material.opacity = 0.34 + 0.06*Math.sin(tNow*2); });
+}
+
+/* ---------- 입력 ---------- */
+const ray = new THREE.Raycaster(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+function pickCell(cx, cy){
+  const r = renderer.domElement.getBoundingClientRect();
+  const v = new THREE.Vector2((cx - r.left)/r.width*2 - 1, -(cy - r.top)/r.height*2 + 1);
+  ray.setFromCamera(v, camera);
+  // 놓인 등·가림막을 먼저 (머리를 눌러도 잡히게)
+  const objs = [...lampObjs.values()].filter(g => !g.userData.fixed).concat([...shadeObjs.values()]);
+  const hits = ray.intersectObjects(objs, true);
+  if (hits.length){ let o = hits[0].object; while (o.parent && o.parent !== world) o = o.parent; return {x:Math.floor(o.position.x), z:Math.floor(o.position.z), obj:true}; }
+  const p = new THREE.Vector3();
+  if (!ray.ray.intersectPlane(groundPlane, p)) return null;
+  return {x:Math.floor(p.x), z:Math.floor(p.z), wx:p.x, wz:p.z, obj:false};
+}
+function nearestFly(cx, cy){
+  const r = renderer.domElement.getBoundingClientRect();
+  let best = null, bd = Math.max(26, pxPerCell*0.7);
+  for (const f of sim.flies){
+    if (f.state !== 'walk' && f.state !== 'air') continue;
+    const [sx, sy] = screenPos(f.x, f.y || 0, f.z), d = Math.hypot(sx + r.left - cx, sy + r.top - cy);
+    if (d < bd){ bd = d; best = f; }
+  }
+  return best;
+}
+function doAct(a, quiet){
+  const err = sim.act(a);
+  if (err){ if (!quiet) toast(err); beep(140, .07, 'square', .03); return err; }
+  syncObjects(); drawFloor(); refreshTools(); updateTop();
+  if (a.a === 'place') beep(a.tool === 'puff' ? 300 : 600, .06, 'triangle', .04, a.tool === 'puff' ? -120 : 120);
+  return '';
+}
+let drag = null;
+const cv = renderer.domElement;
+cv.addEventListener('pointerdown', e => {
+  if (phase !== 'prep' && phase !== 'run') return;
+  if (paused) return;
+  const c = pickCell(e.clientX, e.clientY); if (!c) return;
+  const o = (c.x >= 0 && c.z >= 0 && c.x < sim.W && c.z < sim.H) ? sim.obj[c.z*sim.W + c.x] : null;
+  drag = {x0:e.clientX, y0:e.clientY, cell:c, obj:o, moved:false};
+  try { cv.setPointerCapture(e.pointerId); } catch(err){}
+});
+cv.addEventListener('pointermove', e => {
+  if (!sim || (phase !== 'prep' && phase !== 'run')) return;
+  const c = pickCell(e.clientX, e.clientY);
+  if (drag && drag.obj && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8) drag.moved = true;
+  const t = drag && drag.obj && drag.moved ? drag.obj : tool;
+  if (c && t !== 'look' && c.x >= 0 && c.z >= 0 && c.x < sim.W && c.z < sim.H && (e.pointerType === 'mouse' || (drag && drag.moved))){
+    ghost.visible = true; ghost.position.set(c.x + .5, 0.04, c.z + .5);
+    let ok;
+    if (drag && drag.obj && drag.moved){ const same = c.x === drag.cell.x && c.z === drag.cell.z; ok = same || (sim.cell(c.x, c.z) === '.' && !sim.obj[c.z*sim.W + c.x]); }
+    else ok = !sim.canPlace(t, c.x, c.z) || (sim.obj[c.z*sim.W + c.x] && sim.obj[c.z*sim.W + c.x] === t);
+    ghost.material.color.setHex(ok ? 0x7bd88f : 0xff6b5a);
+  } else if (ghost) ghost.visible = false;
+});
+cv.addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null; if (ghost) ghost.visible = false;
+  if (phase !== 'prep' && phase !== 'run') return;
+  const c = pickCell(e.clientX, e.clientY);
+  if (d.obj && d.moved){   // 끌어서 옮기기
+    if (c && (c.x !== d.cell.x || c.z !== d.cell.z)){
+      if (sim.cell(c.x, c.z) !== '.' || sim.obj[c.z*sim.W + c.x]) { toast('거기에는 옮길 수 없습니다'); return; }
+      doAct({a:'remove', x:d.cell.x, z:d.cell.z}, true);
+      if (doAct({a:'place', tool:d.obj, x:c.x, z:c.z})) doAct({a:'place', tool:d.obj, x:d.cell.x, z:d.cell.z}, true);
+    }
+    return;
+  }
+  if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 12) return;
+  if (d.obj){ doAct({a:'remove', x:d.cell.x, z:d.cell.z}); toast(TOOLS[d.obj].name + '을(를) 치웠습니다 (다시 쓸 수 있음)'); return; }
+  if (tool === 'look'){
+    const f = nearestFly(e.clientX, e.clientY); if (f){ sel = f; updateBrain(true); }
+    return;
+  }
+  const f = nearestFly(e.clientX, e.clientY);
+  doAct({a:'place', tool, x:d.cell.x, z:d.cell.z});
+  if (f && !sel) sel = f;
+});
+cv.addEventListener('pointerleave', () => { if (ghost && !drag) ghost.visible = false; });
+
+/* ---------- 화면 갱신 ---------- */
+function refreshTools(){
+  const box = $('tools'); box.innerHTML = '';
+  const avail = ['look', ...['lamp','shade','bait','puff'].filter(k => (sim.lv.tools[k] || 0) > 0)];
+  for (const k of avail){
+    const b = document.createElement('button'); b.className = 'tool' + (tool === k ? ' sel' : '');
+    const n = k === 'look' ? null : sim.inv[k];
+    if (n === 0) b.classList.add('empty');
+    if (k === 'puff' && phase === 'prep') b.classList.add('empty');
+    b.innerHTML = `<span class="ic">${TOOLS[k].ic}</span><span class="lb">${TOOLS[k].lb}</span>` + (n == null ? '' : `<span class="n">${n}</span>`);
+    b.setAttribute('aria-label', TOOLS[k].name + (n == null ? '' : ` ${n}개 남음`));
+    b.dataset.tool = k;
+    b.onclick = () => { tool = (tool === k && k !== 'look') ? 'look' : k; refreshTools(); if (tool !== 'look') toast(TOOL_HELP[tool]); };
+    box.appendChild(b);
+  }
+}
+function fmtPct(n){ return Math.round(n) + '%'; }
+function updateTop(){
+  if (!sim) return;
+  $('savedTxt').textContent = `${sim.saved}/${sim.total}`;
+  $('savedTxt').classList.toggle('ok', sim.saved/sim.total*100 >= sim.lv.goal);
+  $('goalTxt').textContent = sim.lv.goal + '%';
+  const left = Math.max(0, sim.lv.time - sim.t);
+  $('timeTxt').textContent = Math.ceil(left) + '초';
+  $('timeChip').classList.toggle('low', left < 15 && phase === 'run');
+}
+function bar(id, v, max){ $(id).style.width = clamp(v/max*100, 0, 100) + '%'; }
+function updateBrain(force){
+  const f = sel;
+  const B = $('brain');
+  if (!f){ $('bTitle').textContent = '초파리의 뇌'; $('bState').textContent = phase === 'prep' ? '출발 전' : '-'; return; }
+  $('bTitle').textContent = `초파리 #${f.id + 1}의 뇌`;
+  let st = '';
+  if (f.state === 'saved') st = '구출됨'; else if (f.state === 'dead') st = {water:'물에 빠짐', web:'거미줄', hole:'구멍', time:'시간 초과'}[f.cause] || '잃음';
+  else if (f.state === 'air') st = '점프 중!';
+  else if (!sim.brainOn) st = '뇌 꺼짐 → 무작위';
+  else if (f.oState === 'feed') st = '먹는 중';
+  else if (f.oState === 'surge') st = '냄새 세짐 → 직진';
+  else if (f.oState === 'cast') st = '냄새 약해짐 → 방향 전환';
+  else if (Math.abs(f.turn) > 0.25) st = f.turn > 0 ? '빛 → 왼쪽으로' : '빛 → 오른쪽으로';
+  else if (f.inp.l + f.inp.r > 5) st = '빛 쪽으로 직진';
+  else st = '어둠 속 탐색';
+  $('bState').textContent = st;
+  if (B.classList.contains('collapsed') && !force) return;
+  bar('bInL', f.inp.l, 100); bar('bInR', f.inp.r, 100);
+  $('vInL').textContent = Math.round(f.inp.l); $('vInR').textContent = Math.round(f.inp.r);
+  bar('bSL', f.sum[0], 330); bar('bSR', f.sum[1], 330);
+  $('vSL').textContent = Math.round(f.sum[0]) + 'Hz'; $('vSR').textContent = Math.round(f.sum[1]) + 'Hz';
+  const tb = $('bTurn'), tv = clamp(f.turn/3, -1, 1);
+  // 왼쪽 회전(+)은 막대의 왼쪽으로
+  if (tv >= 0){ tb.style.left = (50 - tv*50) + '%'; tb.style.width = (tv*50) + '%'; }
+  else { tb.style.left = '50%'; tb.style.width = (-tv*50) + '%'; }
+  $('vTurn').textContent = Math.abs(f.turn) < 0.05 ? '0' : (f.turn > 0 ? '← ' : '→ ') + Math.abs(f.turn).toFixed(1);
+  bar('bOdor', f.odor, 1.6); $('vOdor').textContent = f.odor > 0 ? f.odor.toFixed(2) + 'Hz' : '0';
+  bar('bGF', f.gf, 160); $('bTh').style.left = (K.GF_TH/160*100) + '%'; $('vGF').textContent = Math.round(f.gf) + 'Hz';
+  const notes = [];
+  if (f.state === 'walk' && sim.brainOn){
+    if (f.inp.l + f.inp.r > 3) notes.push(`빛이 ${f.inp.l > f.inp.r ? '왼눈' : '오른눈'}에 더 들어옴 → 같은 쪽 하강 뉴런이 더 발화 → 그쪽으로 회전`);
+    if (f.odor > 0.4) notes.push(`냄새 구동 ${Math.round(f.odorD)}Hz (하강 뉴런 18개 합)`);
+    else if (f.odor > 0) notes.push('냄새가 약해서(0.4Hz 미만) 뇌가 반응하지 않음');
+  }
+  if (f.gf > 1) notes.push(`거대섬유 ${Math.round(f.gf)}Hz ${f.gf > K.GF_TH ? '> 45Hz 문턱 → 탈출' : '< 45Hz 문턱 → 그대로'}`);
+  $('bNote').textContent = notes.join(' · ') || (f.state === 'walk' ? '아무 자극도 없어 무작위로 걷는 중' : '');
+}
+$('brainHd').onclick = () => { $('brain').classList.toggle('collapsed'); $('bFold').textContent = $('brain').classList.contains('collapsed') ? '▸' : '▾'; fitCamera(); updateBrain(true); };
+$('brainToggle').onclick = () => {
+  if (!sim || phase === 'result') return;
+  doAct({a:'brain', on:!sim.brainOn}, true);
+  syncBrainBtn();
+  toast(sim.brainOn ? '뇌를 다시 켰습니다' : '뇌를 껐습니다: 반응표 대신 무작위로만 걷습니다 (이번 판은 기록되지 않음)');
+};
+function syncBrainBtn(){
+  const b = $('brainToggle');
+  b.classList.toggle('off', !sim.brainOn);
+  b.textContent = sim.brainOn ? '🧠 뇌 켜짐 — 눌러서 끄기 (대조 실험)' : '💤 뇌 꺼짐 — 눌러서 다시 켜기';
+}
+
+/* ---------- 흐름: 메뉴 → 소개 → 준비 → 진행 → 결과 ---------- */
+function showOnly(id){ for (const o of ['menuOv','introOv','resOv','pauseOv']) $(o).hidden = o !== id; }
+function buildMenu(){
+  const g = $('lvGrid'); g.innerHTML = '';
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement('button'), best = save.best[i], locked = i >= save.unlocked;
+    b.className = 'lvb' + (locked ? ' locked' : '') + (best && best.stars ? ' done' : '');
+    const st = best ? '★'.repeat(best.stars) + '☆'.repeat(3 - best.stars) : '☆☆☆';
+    b.innerHTML = `<span class="num">${locked ? '🔒' : i + 1}</span><span class="nm">${L.name}</span><span class="stars">${st}</span>`;
+    b.setAttribute('aria-label', `레벨 ${i+1} ${L.name}` + (locked ? ' 잠김' : ''));
+    b.onclick = () => { if (locked){ toast('앞 레벨을 깨면 열립니다'); return; } openLevel(i); };
+    g.appendChild(b);
+  });
+}
+function goMenu(){
+  phase = 'menu'; paused = false; buildMenu(); showOnly('menuOv'); $('goBtn').hidden = true;
+}
+function openLevel(i){
+  LV = i; const L = LEVELS[i];
+  $('inNum').textContent = `레벨 ${i+1} / ${LEVELS.length}`; $('inName').textContent = L.name; $('inTip').textContent = L.tip;
+  $('inFlies').textContent = L.flies; $('inGoal').textContent = L.goal + '%'; $('inGoal2').textContent = L.goal2 + '%'; $('inPar').textContent = L.par;
+  $('inTools').innerHTML = ['lamp','shade','bait','puff'].filter(k => L.tools[k]).map(k => `<span>${TOOLS[k].ic} ${TOOLS[k].name} ×${L.tools[k]}</span>`).join('');
+  startLevel(i, (Math.random()*1e9) | 0);
+  phase = 'intro'; showOnly('introOv');
+}
+function startLevel(i, seed, opts = {}){
+  LV = i; sim = new Sim(LEVELS[i], Object.assign({seed}, opts)); flyVis.length = 0;
+  sel = null; tool = 'look'; speed = 1; $('speedBtn').textContent = '×1'; paused = false; acc = 0; resultTimer = 0;
+  $('lvNum').textContent = `레벨 ${i+1}`; $('lvName').textContent = LEVELS[i].name;
+  $('tipBar').innerHTML = `<b>준비:</b> ${LEVELS[i].tip}`; $('tipBar').hidden = false;
+  buildLevel(); syncObjects(); drawFloor(true); refreshTools(); updateTop(); syncBrainBtn(); updateBrain(true);
+  phase = 'prep'; $('goBtn').hidden = false;
+  const first = ['lamp','shade','bait','puff'].find(k => LEVELS[i].tools[k]);
+  if (first && first !== 'puff') tool = first;
+  refreshTools();
+  if (window.innerWidth <= 640) $('brain').classList.add('collapsed');
+  fitCamera();
+}
+$('inGo').onclick = () => { showOnly(null); phase = 'prep'; fitCamera(); };
+$('inBack').onclick = () => goMenu();
+function go(){
+  if (phase !== 'prep') return;
+  sim.start(); phase = 'run'; $('goBtn').hidden = true; $('tipBar').hidden = true; refreshTools(); fitCamera(); beep(660, .1, 'triangle', .05, 200);
+}
+$('goBtn').onclick = go;
+$('speedBtn').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('speedBtn').textContent = '×' + speed; };
+function setPause(on){
+  if (phase !== 'prep' && phase !== 'run'){ paused = false; $('pauseOv').hidden = true; return; }
+  paused = on; $('pauseOv').hidden = !on;
+  $('pMute').textContent = save.mute ? '소리 끔 (눌러서 켜기)' : '소리 켬 (눌러서 끄기)';
+  if (on) $('pResume').focus();
+}
+$('pauseBtn').onclick = () => setPause(!paused);
+$('pResume').onclick = () => setPause(false);
+$('pRestart').onclick = () => { setPause(false); startLevel(LV, (Math.random()*1e9) | 0); };
+$('pMenu').onclick = () => { setPause(false); goMenu(); };
+$('pMute').onclick = () => { save.mute = !save.mute; writeSave(); setPause(true); };
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' || e.key === 'p' || e.key === 'P'){
+    if (phase === 'prep' || phase === 'run'){ e.preventDefault(); setPause(!paused); }
+  } else if (e.key === ' ' && phase === 'prep' && !paused){ e.preventDefault(); go(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && phase === 'run' && !paused) setPause(true); });
+
+function finish(){
+  phase = 'result'; paused = false;
+  const L = sim.lv, pct = sim.saved/sim.total*100, stars = sim.brainEverOff ? 0 : sim.stars(), cleared = pct >= L.goal;
+  const prev = save.best[LV];
+  if (!sim.brainEverOff){
+    if (!prev || stars > prev.stars || (stars === prev.stars && pct > prev.pct)) save.best[LV] = {pct:Math.round(pct), stars, used:sim.used};
+    if (cleared) save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, LV + 2));
+    writeSave();
+  }
+  $('rTitle').textContent = sim.brainEverOff ? '대조 실험 끝 (뇌 끔)' : cleared ? (stars === 3 ? '완벽해요!' : '성공!') : '조금만 더!';
+  $('rStars').innerHTML = [0,1,2].map(k => k < stars ? '★' : '<span class="off">★</span>').join('');
+  const d = sim.deaths, lost = [];
+  if (d.water) lost.push(`물 ${d.water}`); if (d.web) lost.push(`거미줄 ${d.web}`); if (d.hole) lost.push(`구멍 ${d.hole}`); if (d.time) lost.push(`시간 초과 ${d.time}`);
+  $('rLead').textContent = `${sim.total}마리 중 ${sim.saved}마리 구출 (목표 ${L.goal}%, ★★ ${L.goal2}%, ★★★는 도구 ${L.par}개 이하).` + (lost.length ? ' 잃은 초파리: ' + lost.join(' · ') + '.' : '');
+  $('rPct').textContent = fmtPct(pct); $('rUsed').textContent = sim.used; $('rPar').textContent = L.par;
+  $('rBest').textContent = save.best[LV] ? save.best[LV].pct + '%' : '-';
+  $('rNext').hidden = !(LV + 1 < LEVELS.length && save.unlocked > LV + 1);
+  showOnly('resOv'); $('goBtn').hidden = true;
+  beep(cleared ? 990 : 300, .25, 'triangle', .05, cleared ? 400 : -100);
+  // 대조 실험: 같은 배치·같은 씨앗, 뇌만 끔
+  $('rCtrl').innerHTML = '대조 실험 계산 중…';
+  const log = sim.log.filter(a => a.a !== 'brain'), seed = sim.seed;
+  setTimeout(() => {
+    try {
+      const off = replay(LEVELS[LV], log, {seed, brainOn:false}), on = replay(LEVELS[LV], log, {seed, brainOn:true});
+      $('rCtrl').innerHTML = `<b>대조 실험</b> — 방금과 같은 도구 배치·같은 무작위 씨앗으로 다시 돌린 결과:<br>` +
+        `뇌 켬 <b>${fmtPct(on.saved/on.total*100)}</b> · 뇌 끔(반응표 대신 무작위 걷기) <b>${fmtPct(off.saved/off.total*100)}</b>` +
+        (sim.brainEverOff ? '<br>이번 판에서 뇌를 껐기 때문에 기록은 남기지 않았습니다.' : '');
+    } catch(err){ $('rCtrl').textContent = '대조 실험을 계산하지 못했습니다.'; }
+  }, 30);
+}
+$('rAgain').onclick = () => openLevel(LV);
+$('rNext').onclick = () => openLevel(LV + 1);
+$('rMenu').onclick = () => goMenu();
+
+/* ---------- 주 반복 ---------- */
+function stepSim(n){
+  for (let k = 0; k < n; k++){
+    if (sim.over) break;
+    sim.step();
+  }
+  handleEvents();
+  if (sel && sel.state !== 'walk' && sel.state !== 'air' && sim.t > 0){
+    if (!sel._keepT) sel._keepT = sim.t;
+    if (sim.t - sel._keepT > 1.5){ sel = sim.flies.find(f => f.state === 'walk' || f.state === 'air') || sel; }
+  }
+  if (!sel && sim.flies.length) sel = sim.flies[0];
+}
+function frame(now){
+  const dt = Math.min(0.1, (now - lastFrame)/1000); lastFrame = now;
+  if (sim && (phase === 'run') && !paused && auto){
+    acc += dt*speed;
+    let n = 0; while (acc >= K.DT && n < 16){ acc -= K.DT; n++; }
+    if (n) stepSim(n);
+    if (n === 16) acc = 0;
+    if (sim.over){ resultTimer += dt; if (resultTimer > 0.9) finish(); }
+  }
+  if (sim && phase !== 'menu'){
+    drawFloor(); tickObjects(paused ? 0 : dt, now/1000); tickEffects(paused ? 0 : dt);
+    drawFlies(paused ? 0 : dt, paused ? 0 : now/1000);
+    updateTop(); updateBrain();
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 시작 ---------- */
+$('metaLine').textContent = `데이터: FlyWire 커넥톰 783판(뉴런 ${T.meta.neurons.toLocaleString()}개, 연결 ${T.meta.synapse_rows.toLocaleString()}쌍) 전체를 LIF 모델(Shiu 외 2024 매개변수)로 ${T.meta.sim_ms}ms 시뮬레이션해, 입력 세기별 하강 뉴런 발화율을 표로 미리 계산해 두었습니다. 게임은 이 표를 실시간으로 보간해 읽기만 합니다 — 브라우저에서 뇌를 새로 시뮬레이션하거나 출력을 지어내지 않습니다.`;
+// 메뉴 뒤 배경: 첫 레벨을 미리 그려 둠
+sim = new Sim(LEVELS[0], {seed:1}); buildLevel(); syncObjects(); drawFloor(true);
+goMenu(); fitCamera();
+requestAnimationFrame(frame);
+
+/* ---------- 헤드리스 테스트용 ---------- */
+window.__game = {
+  get sim(){ return sim; }, get phase(){ return phase; }, get cam(){ return camera; }, get paused(){ return paused; }, LEVELS, SIM, K,
+  setAuto(v){ auto = !!v; },
+  start(i, seed = 1, opts = {}){ showOnly(null); startLevel(i, seed, opts); return sim; },
+  place(t, x, z){ return doAct({a:'place', tool:t, x, z}, true); },
+  remove(x, z){ return doAct({a:'remove', x, z}, true); },
+  brain(on){ return doAct({a:'brain', on}, true); },
+  go(){ go(); },
+  step(n = 1){ if (phase === 'run') stepSim(n); if (sim.over && phase === 'run') finish(); return sim.t; },
+  pause(v){ setPause(v); }, finish(){ finish(); },
+  select(i){ sel = sim.flies[i] || null; updateBrain(true); },
+  render(){ drawFloor(); tickObjects(0, 0); drawFlies(0, 0); updateTop(); updateBrain(true); renderer.render(scene, camera); },
+  save(){ return JSON.parse(JSON.stringify(save)); },
+  openLevel, goMenu
+};
+</script>
